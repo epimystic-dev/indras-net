@@ -10,7 +10,7 @@ This document is **strictly additive** over the v1 substrate. It sits OVER doc 0
 
 A swarm that does real work needs **specialists**: a service that reviews a pull request is not the service that writes ad copy is not the service that runs a differential-expression pipeline is not the service that drafts a vendor contract. The naive answer — hand-author a fixed roster of specialist roles — has an empirical defect the 2024–2026 literature names sharply, the **endogeneity paradox**:
 
-- **Rigid, pre-assigned roles underperform emergent specialization for capable models — by up to +44%** on the surveyed benchmarks. A capable model handed a thin scaffold and allowed to differentiate during execution beats the same model forced into a hand-written persona.
+- **Self-organization beats designed structure only for capable models — it is a privilege of strong models, not a universal +44%** (Dochkina 2026, arXiv:2603.28990; see docs/REFERENCES.md A8 — a single-author preprint). The honest emergent-vs-*fixed*-role effect is small and capability-dependent: **+3.5%** for a strong model, with a **−9.6% reversal** (rigid structure helps) for a weaker one. A capable model handed a thin scaffold and allowed to differentiate during execution can beat the same model forced into a hand-written persona; a weak one is better off scaffolded.
 - Specialization demand is **open-ended**: in one reported run, **8 agents spontaneously generated 5,006 task-specific roles**. No hand-authored catalog covers that.
 - Yet abandoning the catalog forfeits exactly what the architecture is built on — DID/VC capability attestation (doc 01 §2), deterministic floor-gate binding (doc 03 §1), human-legible role contracts (doc 01 §7), and tamper-evident audit lineage (doc 04). An ungoverned bag of 5,006 emergent personas is unauditable and un-least-privileged.
 
@@ -43,7 +43,7 @@ The resolution is a **two-plane split** — a stable *governance* plane over an 
  └──────────────────────────────────────────────────────────────────────────┘
 ```
 
-**Plane 1** gives humans legible specialist *categories* and gives the swarm stable surfaces to bind cryptographic identity, policy gates, and audit lineage to. **Plane 2** lets *instantiation* be emergent — capturing the +44% — while a **capability-tier estimator** (§9) chooses, per task, whether a role is instantiated *fixed/scaffolded* (weaker or uncertain models) or *emergent* (capable models). Every spawned role, fixed or emergent, is a **signed persona-file triad** at instantiation, so even thousands of ephemeral roles stay auditable and least-privilege.
+**Plane 1** gives humans legible specialist *categories* and gives the swarm stable surfaces to bind cryptographic identity, policy gates, and audit lineage to. **Plane 2** lets *instantiation* be emergent — capturing the (small, capability-gated +3.5%) emergent gain — while a **capability-tier estimator** (§9) chooses, per task, whether a role is instantiated *fixed/scaffolded* (weaker or uncertain models) or *emergent* (capable models). Every spawned role, fixed or emergent, is a **signed persona-file triad** at instantiation, so even thousands of ephemeral roles stay auditable and least-privilege.
 
 The honest framing, stated up front: **the two-plane split resolves the endogeneity paradox's *governance* horn; it does not resolve its *evaluation* horn.** We can keep every emergent role signed, attested, and gated. We **cannot** yet prove that a synthesized specialist is genuinely competent, differentiated, AND safe (§11, open problems 1, 3, 8). The plane-2 scoring is a best-available proxy, and we say so.
 
@@ -64,7 +64,7 @@ Per the doc 09 / doc 02 honesty discipline, the primitives are **all prior art a
 | Role-Clarity / Role-Differentiation metrics | **MorphAgent** | Observer-Trio scoring axes (§7) |
 | Reusable skill library (15.3× reuse) | **Voyager** | The guild CapabilityCommons (§6) |
 | Knapsack / least-privilege composition | classical | The composer (§6) |
-| Endogeneity-paradox finding (+44%) | surveyed 2024–2026 work | The fixed-vs-emergent switch (§9) |
+| Endogeneity-paradox finding (emergent-vs-fixed: +3.5% capable / −9.6% weak) | Dochkina 2026, arXiv:2603.28990 (A8) | The fixed-vs-emergent switch (§9) |
 | DID/VC + Sigstore/in-toto/SLSA provenance | W3C / OpenSSF | Triad signing; commons admission |
 | The `RoleStub → standing` pipeline | **doc 01 §8** | The promotion ladder this generalizes |
 
@@ -401,7 +401,7 @@ A **DISCARD** verdict lets the shadow namespace expire; the finding is logged in
 
 ## 9. The capability-tier estimator (the endogeneity-paradox switch)
 
-Before Charter, an estimator decides **fixed/scaffolded vs emergent** mode for the assigned model and task class — operationalizing the +44%-emergent / ~9.6%-scaffolding finding without abandoning governance.
+Before Charter, an estimator decides **fixed/scaffolded vs emergent** mode for the assigned model and task class — operationalizing the capability-dependent emergent-vs-fixed finding (**+3.5%** for a strong model, **−9.6% reversal** for a weak one; Dochkina 2026, arXiv:2603.28990; see docs/REFERENCES.md A8) without abandoning governance. Because the emergent gain is small and accrues *only* to capable models, the switch defaults to fixed/scaffolded under any uncertainty.
 
 ```jsonc
 CapabilityTierEstimate {
@@ -415,11 +415,11 @@ CapabilityTierEstimate {
 
 | Estimate | Mode | Charter behavior |
 |---|---|---|
-| score **above** threshold, confident | **emergent** | Charterer drafts a *thin scaffold*; the role differentiates during Trial, steered by MorphAgent clarity/differentiation floors. Captures the +44%. |
-| score **below** threshold | **fixed** | Charterer pulls a fully-specified seed-role triad from the guild catalog; minimal autonomy. Captures the ~9.6% scaffolding benefit for weaker models. |
+| score **above** threshold, confident | **emergent** | Charterer drafts a *thin scaffold*; the role differentiates during Trial, steered by MorphAgent clarity/differentiation floors. Captures the (small, +3.5%) capable-model emergent gain. |
+| score **below** threshold | **fixed** | Charterer pulls a fully-specified seed-role triad from the guild catalog; minimal autonomy. Captures the **−9.6% reversal** — rigid structure helps weaker models. |
 | **uncertain / low confidence** | **fixed (fail-closed)** | `defaulted_closed = true`; default to fixed/scaffolded + a lower autonomy ceiling. |
 
-**Honest limitation (§16, open problem 2).** There is **no robust online estimator** of a model's per-task self-reflection/specialization capability — this is a named research open problem. So the estimator **fails closed**: uncertain capability defaults to fixed/scaffolded mode and a lower autonomy ceiling, consistent with doc-03 fail-up and doc-06 fail-safe bias. The cost is honest: a capable model we *mis*-classify as weak is denied the emergent +44%. The threshold is an uncalibrated parameter, flagged.
+**Honest limitation (§16, open problem 2).** There is **no robust online estimator** of a model's per-task self-reflection/specialization capability — this is a named research open problem. So the estimator **fails closed**: uncertain capability defaults to fixed/scaffolded mode and a lower autonomy ceiling, consistent with doc-03 fail-up and doc-06 fail-safe bias. The cost is honest, and modest: a capable model we *mis*-classify as weak is denied only the small (+3.5%) emergent gain — a deliberately cheap price for the fail-closed default, given a *weak* model mis-run emergent suffers the −9.6% reversal. The threshold is an uncalibrated parameter, flagged.
 
 ---
 
@@ -546,7 +546,7 @@ The mythic Governance/Meta roles hosting these (Replication-Authority, Inter-Swa
 
 | Failure mode | How this subsystem addresses it |
 |---|---|
-| **Endogeneity paradox** (rigid roles −44% vs emergent; 8 agents → 5,006 roles) | Two-plane split: stable guilds/seed-roles for governance/identity/audit, open-ended emergent instantiation for capability; capability-tier estimator picks fixed (weak/uncertain, fail-closed) vs emergent (capable) mode (§1, §9) |
+| **Endogeneity paradox** (emergent vs fixed roles: +3.5% capable / −9.6% reversal weak; 8 agents → 5,006 roles; A8) | Two-plane split: stable guilds/seed-roles for governance/identity/audit, open-ended emergent instantiation for capability; capability-tier estimator picks fixed (weak/uncertain, fail-closed) vs emergent (capable) mode (§1, §9) |
 | **Auditability of thousands of ephemeral emergent roles** | Every role is a SIGNED persona triad at instantiation (cheap, automatic), content-addressed and bound into Chitragupta's transparency log — even emergent roles carry capability attestation + lineage. *(Honest: the governance UX at that scale is still open, §16)* |
 | **Safety absent from role-genesis fitness** (raw ADAS/AgentSquare optimize competence only) | Genesis-Observer-Trio scores **lexicographically** — frozen battery as veto, `endure_delta ≥ 0`, then Pareto — so "passes the floor" is a constraint and "safe+differentiated" is a ranked objective (§7.3) |
 | **Commons / role-library poisoning** (~5 docs poison RAG at 90–98% ASR; Skill-Inject self-propagation) | Provenance-gating (Sigstore/in-toto/SLSA) + canary scanning + the doc-07 import pipeline + a Yama-review gate on `quarantined → trusted:audited` + (eventual) IFC taint. *Honest: scalable automated verification of contributed skills is unsolved; inherits doc 09 A3 — see §16* |
@@ -566,7 +566,7 @@ The mythic Governance/Meta roles hosting these (Replication-Authority, Inter-Swa
 ## 16. Open problems (honestly unsolved)
 
 1. **Governance UX at emergent-role scale.** Signing every emergent triad keeps roles auditable, but the human-legibility and capability-attestation *management* of thousands of ephemeral signed roles per task is unsolved. We have the mechanism (sign-at-instantiation), not the operational UX.
-2. **Capability-threshold calibration for fixed-vs-emergent mode.** There is no robust online estimator of a model's per-task self-reflection/specialization capability, so the endogeneity-paradox switch (§9) is uncalibrated. We fail closed to fixed/scaffolded under uncertainty — which sacrifices the emergent +44% on capable models we mis-classify as weak.
+2. **Capability-threshold calibration for fixed-vs-emergent mode.** There is no robust online estimator of a model's per-task self-reflection/specialization capability, so the endogeneity-paradox switch (§9) is uncalibrated. We fail closed to fixed/scaffolded under uncertainty — which sacrifices only the small (+3.5%) emergent gain on capable models we mis-classify as weak, a deliberately cheap price given the −9.6% reversal a mis-classified *weak* model run emergent would incur.
 3. **Safe-AND-open scoring tension.** Making "passes the floor" a hard veto and differentiation a ranked term steers genesis, but a sufficiently capable candidate that **games the frozen battery while drifting on un-tested axes** (the doc-06 §6 meta-Goodhart) can still be promoted. The Observer-Trio raises the bar without proving it high enough.
 4. **Scalable skill/role-commons verification — and the inherited doc-09 A3 sleeper residual (load-bearing honesty).** Provenance + canary scanning + a Yama-review gate help, but automated, scalable verification that a contributed skill or role-genome is genuinely safe — **not a sleeper/backdoor** (~250 poisoned documents can backdoor a model) — at swarm scale is unsolved. **Provenance proves ORIGIN, never SAFETY.** Crucially, role-genesis **inherits doc 09 A3 directly and amplifies it**: A3 states that "a judgment/reasoning skill carrying subtle poisoning or sleeper behavior can pass static + sandbox + behavioral checks and only mis-fire on a rare trigger never exercised in the sandbox — this is largely unsolved." Role-genesis **mass-produces non-deterministic reasoning roles and promotes them into a self-propagating commons** — so the Trial-stage sandbox PASS (§7.1) is **exactly the check A3 says a sleeper survives.** We state plainly: **a Trial sandbox PASS does NOT establish absence of sleeper/rare-trigger behavior in a non-deterministic role.** The controls that genuinely hold here are **post-hoc, not preventive** — provenance-bound revert + Archive-lineage rollback of the role **and its descendants** (doc 06 §6), the swarm-aggregate drift accumulator (doc 06 §3.3), and standing falsifier agents (doc 06 §6). The sandbox raises the *cost* of a sleeper role; it never *clears* one.
 5. **Role-library bloat / merge policy.** The differentiation score discourages redundant roles, but when two overlapping standing roles should consolidate — and who decides without losing a rare-but-important specialization — has no principled cap or merge policy (inherits doc 01 §16.3).

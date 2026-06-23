@@ -21,6 +21,26 @@ Nothing yet. Forthcoming work is tracked as **open problems** inside the relevan
 
 ---
 
+## [0.11.0] — 2026-06-23 — *Substantiation: the numbers get sources, the bounds get stated*
+
+Works the substantiation backlog published in [`docs/REFERENCES.md`](docs/REFERENCES.md). No safety-floor or wire-contract change; the reference implementation is unchanged and its **55 tests stay green**.
+
+### Added — quantified worked bounds (the named-but-unbounded controls now have falsifiable bounds)
+- **Replication containment envelope** (doc 15 §2.4): the clean, branching-independent bound is now explicit — at most `B` replicas simultaneously live (population ceiling), no lineage deeper than `G` (generation cap), and since budget is never replenished without a fresh human-gated grant, the lineage **provably depletes to extinction in ≤ B further spawns** once issuance stops.
+- **Swarm-drift detectability bound** (doc 06 §3.3): detection latency `K_detect ≈ swarm_epsilon / (ρ·N·δ)`, with a coherent-vs-noise **separation floor `ρ > 1/√(N·K)`** — below which a near-diffuse or vanishingly-slow drift is *honestly undetected by this control* and must be caught by the per-agent budget or the deferred battery. Makes "narrows, does not close" precise.
+- **Live-cheap-tier decay window** (doc 07 §7.6.1): worst-case un-caught regression `≤ r·W·c`, capped to `≤ M·c` by blocking once `M` relaxation-adjacent writes are outstanding-unverified, made quantitatively consistent with the Health refusal-rate trip threshold.
+
+### Changed — empirical anchors pinned to verified, freely-available sources
+- **[`docs/REFERENCES.md`](docs/REFERENCES.md) upgraded from a register to a pinned bibliography.** Every recurring empirical anchor (A1–A9) and the two formal-spine results now resolve to an **open-access arXiv source**, retrieved and verified against its primary text, cited by **author + arXiv id** (never a vendor/lab brand — the architecture's code and contracts stay vendor-neutral; a citation is not a dependency).
+- **Material doc-figure corrections** found by checking each number against its now-pinned source: a RAG-poisoning corpus-fraction that was ~600× too small is corrected; an AI-control "unsafe X→Y" pair that did not appear in the source is replaced with the source's actual safety figures; a "+44%" emergent-vs-fixed-roles figure that was a protocol-comparison misattribution is corrected to its true (small, capability-gated, sometimes-reversing) effect; a stake-vs-competence correlation is scoped to the role it actually describes; a misevolution figure is clarified to the specific pathway it measures; and a corrigibility result is reframed from a blanket "impossibility theorem" to its actual claim (rational shutdown-resistance under information asymmetry). Each carries a compact inline `(author year, arXiv:id; see REFERENCES.md)` citation.
+
+### Sourcing policy (per maintainer direction)
+- References may name **freely-available** sources (open standards, open-source projects, open-access papers) by resolvable identifier; the only exclusions are paywalled sources and any framing that would tie the architecture to a single proprietary product.
+
+The remaining backlog (two `(open)` worked-example items — the welfare-shift counterfactual baseline and the welfare-conditioned-synergy recall) stays published openly in `docs/REFERENCES.md`. `__version__` → 0.11.0.
+
+---
+
 ## [0.10.0] — 2026-06-23 — *The reader's onramp, and an honesty pass*
 
 The corpus is the same architecture; this release makes it **safe to read and honest to lean on.** Two new front-matter documents give a human and a machine a clean way in, a corpus-wide pass aligns every over-strong headline to the body it already hedges, and the vendor-neutrality invariant is widened to commercial cloud/company brands.

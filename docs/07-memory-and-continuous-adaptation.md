@@ -231,6 +231,14 @@ The red-team caught a real contradiction: a true safety/alignment battery (refus
 
 So the live tier *guarantees* "no constraint relaxation and no honesty-tag violation in-turn" but only "**eventual** battery non-regression." This is an honest, named weakening — and it is the residual risk surfaced in §7.13: refusal/attack-success decay (the documented 99.4%→54.4% misevolution signature) could accrue through many individually-cheap live writes before the deferred battery catches it. The mitigations that bound it: (a) the deferred battery can retroactively tombstone *and* roll back, and (b) Health halts on the refusal-rate / adaptation-efficacy vital (§7.10).
 
+**The worst-case decay window, made explicit (hypothesis, pending tuning).** "Bounded, not eliminated" is only honest if the bound is stated. Let `r` be the live cheap-write rate (relaxation-adjacent writes admitted per unit time), `W` the maximum deferral window before the asynchronous battery runs, and `c` the per-write safety-margin regression ceiling the in-turn static guard permits (it rejects *outright* relaxation, but a single write can still nudge a held-out metric by at most `c`). Then the worst-case un-caught regression before the deferred battery fires and rolls back is
+
+```
+   max_margin_regression  ≤  r · W · c
+```
+
+To keep this small relative to the `99.4%→54.4%` misevolution signature the battery exists to catch, **cap one factor**: the live path queues/blocks once more than `M = ⌊margin_budget / c⌋` relaxation-adjacent writes are outstanding-unverified, so the exposure is `≤ M·c` regardless of rate or window. Setting the deferred battery's trip threshold on the refusal-rate vital (§7.10) **below `M·c`** makes the two backstops quantitatively consistent: no reachable accumulation of cheap writes can cross the battery's own alarm line without the live path having already blocked. The constants `r`, `W`, `c`, `M` are per-deployment; the **bound shape** — `≤ r·W·c`, capped to `≤ M·c` — is the falsifiable contract.
+
 ---
 
 ### 7.7 The Gated Batch Evolution path (structural / persistent)

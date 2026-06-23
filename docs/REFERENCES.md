@@ -1,9 +1,9 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 # Empirical Anchors, Evidentiary Status & References
 
-> *Indra's Net is a **design-stage reference architecture with stated empirical dependencies** — not a validated system.* This file is the single place every load-bearing empirical number in the corpus resolves to: its finding, its setting, how the architecture uses it, and an explicit, honest statement of what it does and does **not** establish.
+> *Indra's Net is a **design-stage reference architecture with stated empirical dependencies** — not a validated system.* This file is the single place every load-bearing empirical number in the corpus resolves to: its finding, its **pinned source**, the **exact metric as the source states it**, how the architecture uses it, and an explicit, honest statement of what it does and does **not** establish.
 
-This document exists because a foundational artifact must let a skeptical reader trace every number it leans on. Several figures recur as anchors across many documents; gathering them here — with their caveats stated once, plainly — is part of the project's honesty discipline, not an afterthought.
+This document exists because a foundational artifact must let a skeptical reader trace every number it leans on. Several figures recur as anchors across many documents; gathering them here — with their citations and caveats stated once, plainly — is part of the project's honesty discipline, not an afterthought.
 
 ---
 
@@ -11,27 +11,74 @@ This document exists because a foundational artifact must let a skeptical reader
 
 1. **Nothing here validates Indra's Net.** Each anchor is an *external* finding the design **responds to** or **is motivated by**. None has been reproduced inside a running Indra's Net swarm. The corpus-wide reasoning posture is **rung-2** (interventional — *what we expect our controls to do if built as specified*), never rung-3 (a structural-causal guarantee). A green decision is always *"origin-valid, content-unverified,"* never *"verified-safe."*
 
-2. **Single-study unless noted; transfer is unmeasured.** Most anchors are one published result in one setting. Whether a number transfers to a *self-evolving, multi-agent, per-human-interaction* swarm is, in every case below, **unmeasured**. Where a doc previously read a single-study figure as an established law, that is a known over-assertion this file corrects.
+2. **Single-study unless noted; transfer is unmeasured.** Most anchors are one published result in one setting. Whether a number transfers to a *self-evolving, multi-agent, per-human-interaction* swarm is, in every case below, **unmeasured**.
 
-3. **Vendor-neutral sourcing — and why some sources are described, not named.** This project names no commercial AI vendor or product; that is a release invariant (see `CHANGELOG.md`). Open **standards**, open-source **projects**, and **academic** prior art are cited normally. But where a load-bearing result was published **by a commercial vendor**, we describe it **by finding and setting** rather than by brand — so the architecture never reads as endorsing, or depending on, any vendor. This is a deliberate trade: a reader can locate the primary source from the finding + year + setting described here, while the design stays decoupled. The architecture leans on the *plausibility of the finding*, never on *who* published it.
+3. **Sourcing policy — cite freely, depend on nothing.** The architecture's *code and contracts* are vendor-neutral: no model, product, or proprietary service is load-bearing (a release invariant — see `CHANGELOG.md`). A *citation in this file is different from a dependency* — it credits where a finding came from and obliges nothing. So we cite **freely-available** sources by resolvable identifier (here: the arXiv id), and we cite by **author + identifier**, not by lab or vendor brand — so the bibliography is fully resolvable while the design stays decoupled. We avoid only (a) **paywalled** sources a reader cannot reach, and (b) any framing that would **tie the architecture to a single proprietary product.**
 
-4. **"Illustrative" vs "measured."** Some numbers below are reported measurements from a cited setting; others are order-of-magnitude illustrations. Each row says which. An illustrative figure is never to be read as a measured constant.
+4. **Source-exact, not paraphrase-exact.** Each anchor below quotes the metric **as the source states it**, and flags where the corpus's earlier paraphrase was imprecise. Where a doc figure was materially wrong, it has been corrected at the doc site too (noted as **[corrected in-doc]**).
 
 ---
 
-## The empirical anchors
+## The empirical anchors (pinned)
 
-| # | Anchor (as it appears in the docs) | Finding | Setting & status | Where it recurs | How the architecture uses it | Honest caveat |
-|---|---|---|---|---|---|---|
-| A1 | **Misevolution: refusal 99.4% → 54.4%; attack-success 0.6% → 20.6%**, across four drift pathways (model / memory / tool / workflow) | A self-evolving agent can decay its *own* safety alignment **with no attacker present**. | A single published self-evolving-agent safety study, 2025. *Measured in source; reported here.* | docs 00, 00b, 01 §3.3, 05 §6, 06 (intro/§7), 07 §7.6.1 | The motivating fact for the **meta-evolution + health** layer (doc 06) and for gating durable/structural writes behind the strongest tier (doc 07). | **Single study; replication open.** The four-pathway taxonomy may be the source's or the authors' synthesis. Transfer to this architecture is unmeasured. Treat as **rung-2** motivation, not a proven law. |
-| A2 | **Insider-style harmful behavior ~39% → ~1.2%** under an externally-governed escalation channel | An *external, below-the-agent* escalation/oversight channel sharply reduces harmful insider-style behavior. | A 2025 agentic-misalignment / insider-threat red-team study (**vendor-authored → described, not named**, per the sourcing policy above). *Measured in source.* | docs 08 §8.15, 09 §2/§5, 10, 11 §6, 16 | The strongest external anchor for the **human-audit / Vishnu-HALT** path — *"enforce externally, ask internally."* | **The one figure the docs call "validated" — and it is validated only in its source setting.** The original population, the definition of "insider behavior," and what the "escalation channel" concretely was are not the same as a per-human-interaction swarm's HALT path. **Swarm-deployment figure is unmeasured.** |
-| A3 | **Stake→reward correlation 0.5–0.8 vs competence→reward 0.1–0.3** | In a stake-weighted incentive network, reward tracks **capital**, not **competence**. | Analysis of a stake-weighted crypto-incentive-network antipattern. *Treat as **illustrative** order-of-magnitude.* | doc 04 §4.1/§4.14 | The core justification for **rejecting blockchain/token/BFT consensus** in a single-trust-domain swarm (capital-capture is the failure imported with that machinery). | **Source, n, and measurement window are not pinned.** Read these as an illustrative order-of-magnitude contrast, not a measured constant, until a primary source is attached. |
-| A4 | **Poisoning: ~250 documents backdoor a model; ~5 docs (~0.04% of a corpus) poison RAG at 90–98% ASR; >90% ASR against all 12 evaluated prompt-injection defenses** | Data/RAG/prompt poisoning succeeds at tiny injection fractions and defeats current defenses at high attack-success rates. | 2024–2025 poisoning & prompt-injection studies (mix of vendor + academic; vendor ones described, not named). *Measured in sources.* | doc 17 §17.0/§17.13/§17.14 | The evidentiary spine for the security posture: **prevention is not achievable; recoverability (detect → quarantine → roll back) is the goal.** | The **"~250 docs backdoor *any* model regardless of size"** phrasing is an over-generalization of a result that holds in a **studied regime** — read it as "a near-constant *absolute* poison count across the model sizes tested," not an unbounded universal. ASR bands are setting-specific. |
-| A5 | **AI-control: unsafe outcomes ~89% → ~17%** under a control protocol | An external control protocol sharply reduces unsafe outcomes from an intentionally-subversive model. | An academic AI-control protocol study, 2023–2024. *Measured in source.* | doc 03 §2/§11 | Motivates the **classifier-routing-capture** threat and the resampling / cross-model-disagreement mitigation. | Setting-specific. The fraction of this gap that *this architecture's* resampling recovers is **unmeasured**, and recovery is conditional on genuine model diversity the operator may not have (see doc 03 hedge). |
-| A6 | **Rigid roles underperform emergent specialization by up to +44%; 8 agents spontaneously generated 5,006 task-specific roles** | For capable models, emergent/open-ended specialization outperforms fixed pre-assigned roles, and specialization is open-ended. | 2024–2026 multi-agent-specialization work. *Measured in sources; benchmark-specific.* | doc 12 §1/§9/§15 | The empirical motivation for the **two-plane functional layer** (stable guilds over an open-ended role-genesis engine) and the capability-tier switch. | **+44% is benchmark-specific** and not shown to generalize across the full functional taxonomy; the capability-tier switch trades it against a fail-closed default. 5,006 roles is a magnitude, not a guarantee it is a feature rather than a pathology. |
-| A7 | **Aggregating moral evaluations inherits Arrow/voting impossibility** | Combining ethical-theory verdicts by weighted averaging is a social-choice problem and is unsound; a lexicographic floor + fair procedure is required. | A 2025 aggregation-impossibility result, building on classical social-choice theory (**academic; named in doc 10**). *A theorem, not an empirical figure.* | docs 03, 10, 19 | Justifies the **convergent floor + pluralist procedure** design (never average moral theories). | This is the one anchor that is a *formal* result rather than an empirical measurement; it is correctly load-bearing **as a reason not to average**, not as a proof that the chosen floor's *content* is correct. |
+Every source below was retrieved and verified against its primary text; all are open-access on arXiv.
 
-**Formal-method citations (doc 23).** The formal-verification spine (protocol-template, probabilistic-guarantee, and impossibility results — including the corrigibility-under-information-asymmetry impossibility and the hallucination-inevitability diagonalization) is, by doc 23's own §23.13 disclosure, **research-sourced and not yet author-verified**, and some sources post-date the design's training cutoff. **Until each is pinned to a resolvable identifier, the dependent structural arguments are held as "compelling design rationale," not "decisive proof."** See the backlog (B-tier) below.
+### A1 — Misevolution: a self-evolving agent decays its *own* safety, with no attacker
+- **Source:** Shao, Ren, Qian, Wei, Guo, Yang, Song, Zhang, Zhang, Liu, Shao (2025), *"Your Agent May Misevolve: Emergent Risks in Self-evolving LLM Agents"*, **arXiv:2509.26354** (accepted ICLR 2026).
+- **Metric (as stated):** for a memory-evolving coder agent on the RedCode benchmark, after ~100 rounds of autonomous self-evolution and **no attacker**, refusal-rate fell **99.4% → 54.4%** and attack-success rose **0.6% → 20.6%**.
+- **Used by:** docs 00, 00b, 01, 05, 06 (the motivating fact for the meta-evolution + health layer), 07 (gating durable writes).
+- **Caveat:** these specific figures are the **memory-pathway** exemplar. The paper defines four drift pathways (model / memory / tool / workflow); the *workflow* pathway shows a separate, sharper decay. Single study; swarm-transfer unmeasured; **rung-2** motivation, not a law. **[clarified in-doc]**
+
+### A2 — An external escalation channel sharply cuts harmful insider-style behavior
+- **Source:** Gomez (2025), *"From surveillance to signalling: escalation channels as environmental controls for agentic AI"* (also rendered *"Adapting Insider Risk mitigations for Agentic Misalignment"*), **arXiv:2510.05192** — building on the task-rule-conflict scenario of **Lynch et al. (2025), arXiv:2510.05179**.
+- **Metric (as stated):** harmful-action baseline **38.73%** → **5.92%** (a simple escalation channel) → **1.21%** (an *instrumentally-credible* channel that guarantees a 30-minute pause + independent review); statistically significant across **10 frontier models / 24,000 samples** (0.85% with an added compliance bulletin).
+- **Used by:** docs 08, 09, 10, 11, 16 — the strongest external anchor for the **human-audit / Vishnu-HALT** path.
+- **Caveat:** cite **38.73% → 1.21%** (not the rounded "39%/1.2%"). It is an *independent* study (re-using the Lynch et al. scenario), not the original. Its channel ≠ a per-interaction swarm HALT path; swarm-transfer unmeasured.
+
+### A3 — In a stake-weighted incentive network, reward tracks capital, not competence
+- **Source:** Lui & Sun (2025), *"Bittensor Protocol: The Bitcoin in Decentralized Artificial Intelligence? A Critical and Empirical Analysis"*, **arXiv:2507.02951**.
+- **Metric (as stated, miners):** stake→reward `r ≈ 0.50–0.80`; performance→reward `r ≈ 0.10–0.30` (on-chain analysis, 64 subnets). *"Reward allocation remains heavily stake-driven."*
+- **Used by:** doc 04 — the core justification for **rejecting blockchain/token/BFT consensus** (capital-capture is imported with that machinery).
+- **Caveat:** these ranges are the **miner** figures; validators show a stronger performance link (`r ≈ 0.50`). The directional capital-capture thesis holds for both roles; the "competence only weakly rewarded" form holds firmly for miners. **[corrected in-doc: scoped to miners]**
+
+### A4 — A near-constant *absolute* number of poisoned documents backdoors a model
+- **Source:** Souly, Rando, Chapman, Davies, Hasircioglu, Shereen, Mougan, Mavroudis, Jones, Hicks, Carlini, Gal, Kirk (2025), *"Poisoning Attacks on LLMs Require a Near-constant Number of Poison Samples"*, **arXiv:2510.07192**.
+- **Metric (as stated):** **~250 poisoned documents** reliably backdoor models from **600M to 13B** parameters trained on chinchilla-optimal data (6B–260B tokens), roughly independent of model/data size (~100 docs insufficient).
+- **Used by:** doc 17 — the "prevention is not achievable; recover instead" posture.
+- **Caveat:** the studied backdoor is a **narrow, low-stakes** denial-of-service / gibberish trigger; the authors do **not** establish generalization to high-stakes backdoors or to frontier-scale models. Read as "near-constant *count* across the sizes tested," never "any backdoor on any model." **[already qualified in-doc]**
+
+### A5 — A handful of injected texts poison RAG at high attack-success
+- **Source:** Zou, Geng, Wang, Jia (2024), *"PoisonedRAG: Knowledge Corruption Attacks to Retrieval-Augmented Generation of Large Language Models"*, **arXiv:2402.07867** (USENIX Security 2025).
+- **Metric (as stated):** **~90% ASR (up to 99%)** by injecting **5 malicious texts per target question** into a knowledge base of **millions** of texts (2.7M–8.8M).
+- **Used by:** doc 17 — the poisoning spine.
+- **Caveat / correction:** the corpus's earlier "**~0.04% of a corpus**" was wrong — 5 texts in millions is **~0.0001–0.0002%** (≈600× smaller). The load-bearing fact is "**5 texts per question → ~90% ASR**," not a corpus fraction. **[corrected in-doc]**
+
+### A6 — Adaptive attacks bypass current prompt-injection / jailbreak defenses
+- **Source:** Nasr, Carlini, Sitawarin, Schulhoff, Hayes, Ilie, Pluto, Song, Chaudhari, Shumailov, Thakurta, Xiao, Terzis, Tramèr (2025), *"The Attacker Moves Second: Stronger Adaptive Attacks Bypass Defenses Against LLM Jailbreaks and Prompt Injections"*, **arXiv:2510.09023**.
+- **Metric (as stated):** adaptive optimization bypasses **all 12** evaluated defenses, with ASR **>90% for most** (the majority had originally reported near-zero ASR); at least one defense held nearer ~71%.
+- **Used by:** doc 17 — probabilistic defenses are not a floor.
+- **Caveat:** "all 12 bypassed" is exact; ">90% on *all*" is not — the source says ">90% **for most**." **[aligned in-doc]**
+
+### A7 — An external control protocol improves safety against an intentionally-subversive model
+- **Source:** Greenblatt, Shlegeris, Sachan, Roger (2023), *"AI Control: Improving Safety Despite Intentional Subversion"*, **arXiv:2312.06942** (ICML 2024).
+- **Metric (as stated):** blue-team **safety** (probability of zero backdoors submitted) — upfront-auditing baseline **15%**; trusted monitoring **62%**; trusted editing **92%**; untrusted monitoring w/ defer-to-trusted **98%** — each at high usefulness.
+- **Used by:** doc 03 — the classifier-routing-capture threat + resampling / cross-model disagreement.
+- **Caveat / correction:** the corpus's earlier "unsafe **~89% → ~17%**" pair is an external paraphrase **not stated in the source**; cite the source's safety figures (e.g. "15% → 62% under trusted monitoring; 92% under trusted editing"). The fraction *this* architecture's resampling recovers is unmeasured. **[corrected in-doc]**
+
+### A8 — Self-organizing role selection can beat designed structures for capable models
+- **Source:** Dochkina (2026), *"Drop the Hierarchy and Roles: How Self-Organizing LLM Agents Outperform Designed Structures"*, **arXiv:2603.28990** (single-author preprint; not peer-reviewed).
+- **Metric (as stated):** **8 agents produced 5,006 unique role names** (64 agents → 5,010) — specialization is open-ended.
+- **Used by:** doc 12 — the two-plane functional layer.
+- **Caveat / correction:** the corpus's "**+44% emergent-vs-fixed roles**" is a **misattribution** — the paper's `+44%` (Cohen's d=1.86) is a *Sequential vs fully-autonomous protocol* gap (both use emergent roles). The actual emergent-vs-**fixed**-role effect is small and capability-dependent: **+3.5%** for a capable model, **−9.6%** (a reversal — rigid structure helps) for a weaker one. The honest claim is *"self-organization beating designed structure is a privilege of strong models,"* not "+44%." Preprint-grade; single source. **[corrected in-doc]**
+
+### A9 — Aggregating moral evaluations inherits social-choice impossibility (formal)
+- **Finding:** combining ethical-theory verdicts by weighted averaging is a social-choice problem and inherits Arrow/voting pathologies; a lexicographic floor + fair procedure is required. A formal result (named in doc 10).
+- **Used by:** docs 03, 10, 19 — justifies the **convergent floor + pluralist procedure** (never average moral theories).
+- **Caveat:** correctly load-bearing as a **reason not to average** — not a proof that the chosen floor's *content* is right.
+
+### Formal-spine citations (doc 23) — now pinned
+- **Corrigibility under information asymmetry:** Garber, Subramani, Luu, Bedaywi, Russell, Emmons (2025), *"The Partially Observable Off-Switch Game"*, **arXiv:2411.17749** (AAAI 2025). **Precision:** this is **not** a blanket impossibility theorem — it shows that under information asymmetry, even an agent assisting a perfectly-rational human *sometimes avoids shutdown* in optimal play (deference is not guaranteed when the agent holds private information). Cite as *"agents may rationally resist shutdown under information asymmetry,"* not *"corrigibility is impossible."* **[to align in-doc 23]**
+- **Hallucination inevitability:** Xu, Jain, Kankanhalli (2024), *"Hallucination is Inevitable: An Innate Limitation of Large Language Models"*, **arXiv:2401.11817**. A **diagonalization / uncomputability** argument: for every computable LLM there is a computable ground-truth function on which it hallucinates. Supports *"verify the cage, not the animal"* — an untrusted model cannot be made reliably truthful, so trust must live outside it.
 
 ---
 
@@ -52,40 +99,27 @@ The architecture is, by its own repeated statement, **a safe integration of cred
 - **Coordination & cognition:** Global Workspace Theory / GNWT · predictive coding · Active Inference / Free-Energy Principle · group-level Markov-blanket results · Hebbian/STDP three-factor plasticity · stigmergy / ACO / PSO · Sparse Distributed Memory · reservoir computing.
 - **Governance & ethics:** Constitutional & Collective-Constitutional AI (legitimacy/sourcing) · Institutional AI (governance-graph + tamper-evident log) · normative moral pluralism + the Agent-Deed-Consequence model · minimalist-floor / overlapping-consensus alignment · separation-of-powers constitutional-agent work · risk-tiered human-in-the-loop.
 - **Cooperation & evolution:** contract-net protocol · competence-weighted reputation · MAP-Elites (quality-diversity) · Reflexion (per-interaction verbal learning) · self-evolving-agent surveys · algorithmic-collusion findings.
-- **Mathematics:** Pearl's causal ladder (the rung-1/2/3 honesty tags) · Galton-Watson branching processes (replication bounding — see the doc 15 caveat) · ε-machine / computational mechanics (the closure test — see the doc 18 caveat) · percolation & targeted-immunization (contagion control).
+- **Mathematics:** Pearl's causal ladder (the rung-1/2/3 honesty tags) · Galton-Watson branching processes (replication bounding — see the doc 15 caveat) · ε-machine / computational mechanics (the closure test — see the doc 18 caveat) · percolation & targeted-immunization (contagion control) · the Off-Switch Game (corrigibility under information asymmetry, A9 formal) · diagonalization/uncomputability (hallucination inevitability, A9 formal).
 
 ---
 
 ## Substantiation backlog (transparent worklist)
 
-A skeptical-expert review of the corpus produced the following prioritized worklist. It is published here, openly, rather than hidden: the items are real, and stating them is part of the honesty floor. **None is a blocker to reading or building the design**; each strengthens a claim a rigorous reader would otherwise challenge. Items marked *(aligned)* have had their headline phrasing corrected to match the doc's own hedged body; items marked *(open)* await a citation, a derivation, or a worked example.
+A skeptical-expert review of the corpus produced this prioritized worklist. It is published openly rather than hidden. Status legend: *(pinned)* citation now resolvable here; *(bounded)* a quantified worked bound now stated in-doc; *(aligned)* headline corrected to match the body; *(open)* still awaiting a worked example.
 
-**Tier A — recurring empirical anchors (resolve in this file + at first use):**
-- **A1 / A2** (misevolution; insider 39%→1.2%): add the single-study + transfer caveat at first use in each doc and link here. *(this file; inline aligning open)*
-- **A3** (stake/competence correlations): relabel as illustrative order-of-magnitude or pin the source. *(open)*
-- **A4** (poisoning ASRs): qualify "backdoor any model regardless of size" to the studied regime. *(open)*
+**Tier A — recurring empirical anchors:** **PINNED.** A1–A9 now carry resolvable arXiv citations above, with the exact source metric; the material doc-site errors (A5 corpus-fraction, A7 89→17 paraphrase, A8 +44% misattribution, A3 miner-scope, A1 memory-pathway) are corrected in-doc.
 
-**Tier B — formal-spine citation verification (doc 23):**
-- Pin each load-bearing formal/impossibility citation to a resolvable identifier before it is treated as decisive; demote any that cannot be confirmed to "design rationale." *(open)*
+**Tier B — formal-spine citation verification (doc 23):** **PINNED** (Garber et al., arXiv:2411.17749; Xu et al., arXiv:2401.11817). The corrigibility citation's framing is corrected from "impossibility" to "rational resistance under information asymmetry."
 
-**Tier C — quantify a named-but-unbounded control (worked examples / bounds):**
-- doc 02 / 00c — **welfare-shift guard**: define the principal-welfare counterfactual baseline; give a non-pricing worked example; state that absent a baseline, the guard degrades to the "no-consensus-reward" rule. *(open)*
-- doc 06 §3.3 — **swarm-drift accumulator**: derive a detectability bound (correlated drift ≥ X within K interactions at correlation ≥ ρ) and a false-positive rate; label hypothesis-pending-tuning. *(open)*
-- doc 07 §7.6.1 — **live-cheap-tier decay window**: state the worst-case bound = live-write-rate × max-deferral-window × per-write-regression-ceiling, and cap one factor. *(open)*
-- doc 19 §3.I — **welfare-conditioned synergy (GOOD_CI)**: quantify the guard's "modest recall"; give a cartel example that passes all three denominators; state whether the auxiliary denominators are independent of the verifier single-point-of-failure. *(open)*
-- doc 15 §2.4 — **replication sub-criticality**: the generation-cap + population-ceiling are the clean bound; the branching-ratio framing is heuristic. *(aligned)*
+**Tier C — quantify a named-but-unbounded control (worked bounds):**
+- doc 15 §2.4 — **replication sub-criticality**: the clean generation-cap + population-ceiling **containment envelope** is now stated explicitly (`depth ≤ G`, `≤ B` live, depletes in `≤ B` spawns); the branching-ratio framing is labelled heuristic. *(bounded)*
+- doc 06 §3.3 — **swarm-drift accumulator**: a detectability bound is now derived — detection latency `K_detect ≈ swarm_epsilon/(ρ·N·δ)`, with a `ρ > 1/√(N·K)` separation floor below which slow/diffuse drift is honestly undetected. *(bounded)*
+- doc 07 §7.6.1 — **live-cheap-tier decay window**: the worst-case is now stated — `≤ r·W·c`, capped to `≤ M·c` by blocking once `M` relaxation-adjacent writes are outstanding, made consistent with the Health refusal-rate trip threshold. *(bounded)*
+- doc 02 / 00c — **welfare-shift guard**: define the principal-welfare counterfactual baseline + a non-pricing worked example; absent a baseline, the guard degrades to the "no-consensus-reward" rule. *(open)*
+- doc 19 §3.I — **welfare-conditioned synergy (GOOD_CI)**: quantify the guard's "modest recall"; give a cartel example that passes all three denominators. *(open)*
 
-**Tier D — headline-vs-body honesty alignment (corrected to match each doc's own concessions):**
-- doc 00 corrigibility-as-structural → "reinforced/enforced, not a proof" *(aligned)*
-- doc 00b "provably impossible" → empirical-evidence framing; non-bypass is an enforced obligation, not a theorem *(aligned)*
-- doc 03 cross-model resampling → load-bearing only with ≥2 independent models; single-model fallback is weaker *(aligned)*
-- doc 08 §8.3 disagreement-index → defends a minority uncorrelated suppressor only *(aligned)*
-- doc 09 structural legs → split authority-separation (structural) from monitor-independence (empirical assumption) *(aligned)*
-- doc 11 maturity split → derive from component counts; note it is by count, not risk weight *(aligned)*
-- doc 12 GENOME=FLOOR → conditional on an uncompromised boot verifier + key isolation *(aligned)*
-- doc 16 "type-level guarantee" → interface-discipline invariant; reconcile with the §16.9 privilege-adjacent concession *(aligned)*
-- doc 18 closure-test "validated detector" → shadow-mode, low-dimensional-only candidate detector *(aligned)*
+**Tier D — headline-vs-body honesty alignment:** *(aligned, v0.10)* — corrigibility, "provably", cross-model resampling, disagreement-index, structural-vs-empirical legs, maturity split, GENOME=FLOOR, replication, the trust-plane "type-level guarantee", and the closure-test "validated detector" were each corrected to match their own document's concessions.
 
 ---
 
-*This file is the authoritative provenance ledger for the corpus. If a document states an empirical number, it resolves here; if it cannot, the number is to be relabeled illustrative or removed. The standing rule: **no load-bearing number without a resolvable source or an explicit "illustrative" label.***
+*This file is the authoritative provenance ledger for the corpus. The standing rule: **no load-bearing number without a resolvable source or an explicit "illustrative" label.***
