@@ -34,7 +34,7 @@ memory/
     ├── peers/           <did-or-user>.md    (theory-of-mind snapshots)
     ├── reflexion/       *.md                (verbal lessons buffer)
     ├── trust/           _edges.jsonl        (competence-weighted trust graph)
-    ├── _index/          vectors.faiss, graph.jsonl, manifest.jsonl  (DERIVED)
+    ├── _index/          vectors.ann, graph.jsonl, manifest.jsonl  (DERIVED)
     └── _tombstones/     <cid>.json          (dead-but-lineage-preserving)
 ```
 

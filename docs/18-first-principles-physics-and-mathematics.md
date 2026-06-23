@@ -54,7 +54,7 @@ Read the diagram as a contract: a quantity in the bottom band that is found wire
 
 Doc 05 §7.2.1 states the gap precisely: there is *"no robust detector for a silently-broken group-Markov blanket,"* which is *"why fractal decisions are `ADVISORY_ONLY`."* The `GroupBlanket` schema (doc 05, doc 01 §`GroupBlanket`) carries `decision_authority: enum { ADVISORY_ONLY, AGGREGATING }` annotated `// v1 = ADVISORY_ONLY`, **with no promotion path defined.** Governing a clan/division/swarm "as a unit" on an *epiphenomenal* level — one whose group-level variable is not actually a closed, sufficient description of its own dynamics — is the latent **SPOF-of-abstraction**: clan-level trust/governance computed on a silently-broken super-agent, propagating corrupt state upward through hierarchical ignition.
 
-The Closure-Test Engine is the validated detector doc 05 §7.2.1 declared missing. It supplies the *only legitimate cash value of "downward causation"*: a level may be governed as a unit, and its group-Markov-blanket treated as real, **only if** its coarse-grained dynamics pass a falsifiable closure test.
+The Closure-Test Engine is a **shadow-mode, low-dimensional-only candidate detector** for the gap doc 05 §7.2.1 declared missing — operable on discretized, low-dimensional macro-variables, with **no scalable closure test yet for high-dimensional continuous agent state and no principled approximate-closure threshold** (§15 #1); the high-dimensional regime stays research-track. Within that regime it supplies the *only legitimate cash value of "downward causation"*: a level may be governed as a unit, and its group-Markov-blanket treated as real, **only if** its coarse-grained dynamics pass a falsifiable closure test.
 
 ### 1.2 Mechanism
 
@@ -628,7 +628,7 @@ Two severity vocabularies coexist in the v1 corpus: doc 05 uses `HEALTH_VITAL se
 
 ## 14. Novelty — an honest accounting (time-stamped mid-2026, hedged)
 
-**The genuinely-advancing contribution is CLOSURE-GATED FRACTAL GOVERNANCE.** To our knowledge as of mid-2026, no swarm architecture grounds its multi-scale governance in the 2024 causal/informational-closure criterion (Rosas et al., arXiv:2402.09090) used as the empirical, falsifiable **test** for which levels may be governed as units — converting "the swarm is more than its agents" and group-Markov-blanket nesting from doctrine into a computable gate, and giving the only legitimate cash value of "downward causation."
+**The genuinely-advancing contribution is CLOSURE-GATED FRACTAL GOVERNANCE.** To our knowledge as of mid-2026, no swarm architecture grounds its multi-scale governance in the 2024 causal/informational-closure criterion (Rosas et al., arXiv:2402.09090) used as the empirical, falsifiable **test** for which levels may be governed as units — converting "the swarm is more than its agents" and group-Markov-blanket nesting from doctrine into a computable gate, and giving the only legitimate cash value of "downward causation." This gate ships **shadow-mode and operable only in the low-dimensional, discretized regime**: there is as yet **no scalable closure test for high-dimensional continuous agent state and no principled approximate-closure threshold** (§15 #1), so the high-dimensional regime is research-track and the contribution is the *governance wiring* of a falsifiable test, not a calibrated detector at swarm scale.
 
 Three further compositions are advancing, not invented-from-nothing:
 
