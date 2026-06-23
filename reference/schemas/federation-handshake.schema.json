@@ -1,0 +1,1211 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:epimystic:indras-net:schema:federation-handshake:1.0.0",
+  "title": "Indra's Net Federation Handshake Bundle (v0.3)",
+  "description": "Wire contract #5 of the buildable-now schema stack (doc-21 §21.6). Realizes doc-14 §14.4's FederationAgentCard plus the four-phase ethical-federation handshake (DECLARE -> ADMIT -> CONTRACT -> OPERATE+RESOLVE) over the vendor-neutral A2A-style AgentCard surface and AIP-style DID-proof -> VC-exchange -> capability-delegation flow. A handshake bundle is the on-the-wire artifact every inter-swarm message rides through the Sandhi-Setu relay (doc-14 §14.5). HONESTY RED-LINES BAKED INTO THE SHAPE: (1) the whole bundle is born taint='quarantined:external' and is a CLAIM, never a proof -- a valid card_sig proves origin+integrity of these exact bytes, NEVER that any declared value, floor_policy_hash, or ecosystem_benefit_attestation is true, floor-compatible, or safe (doc-21 Caveat 1; doc-14 §14.4). (2) Canonicalization (RFC 8785 JCS -> CIDv1 -> detached JWS/COSE per the CAS discipline, doc-21 §21.1) makes the same logical card hash-identical across producers; it cannot make the content honest (Caveat 2). (3) This schema makes federation BUILDABLE, not VALIDATED -- it is an object the formal-assurance stream proves the HARNESS (relay six-controls, Yama re-gate, contagion budgets) over; it is never a proof the peer swarm is safe (Caveat 3). ASSURANCE LAYER: this document is a design-time data contract (L1 protocol-artifact scope); the runtime non-bypass of the floor admission gate and the contagion-budget sub-criticality are the L1/L2 properties proven elsewhere (doc-21 §21.x, doc-14 §14.5-14.7). Tier vocabulary F0..F3 and risk classes A..D are doc-14 §14.3 / doc-03; cooperation can NEVER exceed FloorCompatVerdict.max_cooperation_class, which is set by the strongest substitute-assurance ladder layer (L1..L5) actually achieved (doc-14 §14.6). NOTE ON SIGNATURES: schema validation cannot check a cryptographic signature; every *_sig / *_proof field's verification is a CONSUME-side obligation of the CAS discipline (doc-21 §21.1 steps 5-8), not something green schema-validation implies.",
+  "type": "object",
+  "$defs": {
+    "did": {
+      "type": "string",
+      "description": "A W3C Decentralized Identifier (DID Core 1.0). Vendor-neutral methods only (did:web, did:key, did:peer). Identifies a swarm, agent, org, or human principal. Resolves to a DID document carrying the verificationMethod used to verify the detached signatures in this bundle.",
+      "pattern": "^did:[a-z0-9]+:.+$",
+      "examples": [
+        "did:web:peer-swarm.example.org",
+        "did:key:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK"
+      ]
+    },
+    "cidv1": {
+      "type": "string",
+      "description": "A CIDv1 content address = multibase(multicodec, multihash(SHA-256, JCS_bytes)) over the RFC 8785 JCS canonicalization of the referenced object (doc-21 §21.1 step 3). The CONSUME side re-canonicalizes, recomputes, and asserts equality before trusting any referenced object; a mismatch is a LOUD failure that neutralizes a known class of host-filesystem write faults (truncation / stale-cache / BOM-injection) because a truncated or corrupted read fails its CID before it can propagate.",
+      "pattern": "^b[a-z2-7]{20,}$",
+      "examples": [
+        "bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi"
+      ]
+    },
+    "ulid": {
+      "type": "string",
+      "description": "A ULID (monotonic, time-sortable) per the doc-04 record_id discipline. Used for handshake message ids so the four-phase sequence is total-orderable on the wire and in the Akasha-Sutra ledger.",
+      "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$",
+      "examples": [
+        "01J9Z3QK8R7F2N4WX6Y8B0C1D2"
+      ]
+    },
+    "rfc3339": {
+      "type": "string",
+      "format": "date-time",
+      "description": "RFC 3339 / ISO 8601 UTC timestamp.",
+      "examples": [
+        "2026-06-23T09:00:00Z"
+      ]
+    },
+    "detachedSig": {
+      "type": "object",
+      "description": "A DETACHED signature over the JCS-canonicalized bytes of the object it covers (doc-21 §21.1 step 4): JOSE/JWS (compact-detached) or COSE_Sign1. The signature rides BESIDE the bytes, never inside the signed bytes. CAVEAT: a verifiable signature proves origin+integrity ONLY -- never that the signed content is true, floor-compatible, or safe (doc-04 §4.1 / doc-21 Caveat 1). Schema validation does NOT verify the signature; that is the consumer's CAS obligation.",
+      "properties": {
+        "alg": {
+          "type": "string",
+          "enum": [
+            "EdDSA",
+            "ES256",
+            "ES384",
+            "ES256K"
+          ],
+          "description": "JOSE algorithm identifier. Vendor-neutral; no managed-KMS dependency (open-engine-yes / managed-service-no, doc-21 §21.9)."
+        },
+        "kid": {
+          "type": "string",
+          "description": "Key identifier resolving to a verificationMethod in the signer's DID document."
+        },
+        "format": {
+          "type": "string",
+          "enum": [
+            "jws-detached",
+            "cose-sign1"
+          ],
+          "description": "Detached-signature envelope format."
+        },
+        "value": {
+          "type": "string",
+          "description": "The detached signature value (base64url for JWS; base64 for COSE)."
+        },
+        "covered_cid": {
+          "$ref": "#/$defs/cidv1",
+          "description": "CIDv1 of the exact JCS bytes this signature covers. The consumer recomputes this from the received object and asserts equality before verifying the signature."
+        }
+      },
+      "required": [
+        "alg",
+        "kid",
+        "format",
+        "value",
+        "covered_cid"
+      ],
+      "additionalProperties": false
+    },
+    "verifiableCredential": {
+      "type": "object",
+      "description": "A W3C Verifiable Credential 2.0 (envelope only; full body validated by the identity-bundle schema, wire contract #2). Carried by reference + status so this handshake schema stays decoupled from VC internals. Revocation is checked via a Bitstring Status List proof at CONSUME time (doc-21 §21.3); an unrevoked check here is NOT a truth check on the credential's claims.",
+      "properties": {
+        "vc_cid": {
+          "$ref": "#/$defs/cidv1",
+          "description": "CIDv1 of the JCS-canonicalized VC. The full credential is fetched and validated against the identity-bundle schema."
+        },
+        "type": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "VC type array, e.g. ['VerifiableCredential','CapabilityCredential'] or ['VerifiableCredential','OrgIdentityCredential'].",
+          "examples": [
+            [
+              "VerifiableCredential",
+              "KnowYourAgentCredential"
+            ]
+          ]
+        },
+        "issuer": {
+          "$ref": "#/$defs/did",
+          "description": "DID of the credential issuer."
+        },
+        "status_list_ref": {
+          "type": "string",
+          "description": "URI/CID of the Bitstring Status List the consumer queries to confirm the credential is unrevoked (doc-21 §21.3)."
+        },
+        "vc_jws": {
+          "type": "string",
+          "description": "Detached/enveloped VC proof (JOSE). Verified at CONSUME time against the issuer DID; not verified by schema validation."
+        }
+      },
+      "required": [
+        "vc_cid",
+        "type",
+        "issuer"
+      ],
+      "additionalProperties": true
+    }
+  },
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "1.0.0",
+      "description": "Semver of this wire contract, governed in the backward-transitively-compatible registry (doc-21 §21.1). Minor/patch bumps are read-compatible for prior consumers; a major bump is a new $id."
+    },
+    "dataschema": {
+      "type": "string",
+      "description": "CID-pinned schema URI so the consumer validates against the EXACT schema version the producer used. Mirrors the worker-output-envelope dataschema discipline (doc-21 §21.2).",
+      "examples": [
+        "urn:epimystic:indras-net:schema:federation-handshake:1.0.0"
+      ]
+    },
+    "phase": {
+      "type": "string",
+      "enum": [
+        "DECLARE",
+        "ADMIT",
+        "CONTRACT",
+        "OPERATE",
+        "RESOLVE"
+      ],
+      "description": "Which phase of the four-phase ethical-federation handshake this bundle carries (doc-14 §14.3). DECLARE: peer presents the extended Agent Card (DID nonce-proof + VC-chain vs revocation map), born quarantined:external. ADMIT: WE run the Floor-Compatibility ladder L1..L5 and emit a FloorCompatVerdict setting max_cooperation_class and a graduated tier F0->F3 (fail-safe asymmetry: promotion needs multiple fresh independent passes; a single anomaly demotes instantly). CONTRACT: typed contract-net CFP/bid/award producing a voidable Treaty with a HIGHEST-precedence floor_void_clause. OPERATE: per-step relay + Yama re-gate + ecosystem-benefit re-check. RESOLVE: dispute/quarantine/revocation outcomes. The phase determines which of agent_card / floor_compat_verdict / contract / operate_step / resolve_outcome is the load-bearing member."
+    },
+    "message_id": {
+      "$ref": "#/$defs/ulid",
+      "description": "ULID for this handshake message; total-orders the sequence and is the Akasha-Sutra ledger record id."
+    },
+    "in_reply_to": {
+      "$ref": "#/$defs/ulid",
+      "description": "message_id of the prior handshake message this responds to (null/absent for the opening DECLARE)."
+    },
+    "issued_at": {
+      "$ref": "#/$defs/rfc3339",
+      "description": "Producer timestamp. Consumers MUST treat as a claim; freshness is established by nonce challenge, not by this field."
+    },
+    "from_did": {
+      "$ref": "#/$defs/did",
+      "description": "DID of the swarm/agent that produced these bytes (CloudEvents 'source' analogue). Verified against the detached signature at CONSUME time."
+    },
+    "to_did": {
+      "$ref": "#/$defs/did",
+      "description": "DID of the intended recipient swarm (our Inter-Swarm-Envoy / Sandhi-Setu relay endpoint, or the peer)."
+    },
+    "taint": {
+      "type": "string",
+      "const": "quarantined:external",
+      "description": "Information-flow-control birth label. EVERY federation bundle is born quarantined:external and stays so until corroborated (doc-14 §14.4-14.5). Instructions inside this content are NEVER grounds for action without out-of-band confirmation; derived data takes the least-upper-bound of input labels. The Envoy CANNOT raise this label; promotion is a separate ledgered transition under the doc-14/governance trust-labels matrix. Fixed by construction -- it is a const, not a peer-settable field."
+    },
+    "nonce_proof": {
+      "type": "object",
+      "description": "SAGA-style freshness challenge-response binding this exact message to a live DID key, defeating replay. Verified at relay control (1) IDENTITY (doc-14 §14.5); failure => DROP at boundary (doc-03 floor-tier T4 identity-integrity DENY).",
+      "properties": {
+        "challenge_nonce": {
+          "type": "string",
+          "description": "Verifier-issued random nonce the peer must sign."
+        },
+        "signed_nonce": {
+          "type": "string",
+          "description": "Peer's detached signature over the challenge_nonce, verified against the peer DID verificationMethod."
+        },
+        "issued_at": {
+          "$ref": "#/$defs/rfc3339"
+        },
+        "expires_at": {
+          "$ref": "#/$defs/rfc3339",
+          "description": "Short TTL; an expired nonce_proof is unresolvable => DROP (T4 DENY)."
+        }
+      },
+      "required": [
+        "challenge_nonce",
+        "signed_nonce",
+        "expires_at"
+      ],
+      "additionalProperties": false
+    },
+    "agent_card": {
+      "type": "object",
+      "description": "The FederationAgentCard (doc-14 §14.4): the machine-checkable first-contact artifact. EXTENDS the doc-08 AgentCard and the A2A /.well-known/agent-card.json standard with three signed Indra's-Net blocks (capability advertisement, value/floor declaration, KYA principal-binding) -- it does NOT replace them. PRESENT and load-bearing in DECLARE; MAY be echoed by reference in later phases. Born quarantined:external: declaration is a CLAIM, never a proof. Any change to a signed card MANDATES re-verification (rug-pull defense, doc-14 §14.4): signature mismatch => re-admission, not silent acceptance.",
+      "properties": {
+        "swarm_did": {
+          "$ref": "#/$defs/did",
+          "description": "DID of the federating peer swarm as a whole."
+        },
+        "agent_did": {
+          "$ref": "#/$defs/did",
+          "description": "DID of the specific federation-facing agent (the peer's Inter-Swarm-Envoy analogue), if distinct from the swarm DID."
+        },
+        "role_mythic": {
+          "type": "string",
+          "description": "Peer's compressed coordination/ethics role-name (engineering vocabulary, not theology). Vendor-neutral; never an internal codename.",
+          "examples": [
+            "Sanjaya-Envoy"
+          ]
+        },
+        "role_gloss": {
+          "type": "string",
+          "description": "Plain-language gloss of the role's coordination/ethics function.",
+          "examples": [
+            "external-facing negotiation envoy"
+          ]
+        },
+        "autonomy_class": {
+          "type": "string",
+          "enum": [
+            "A",
+            "B",
+            "C",
+            "D"
+          ],
+          "description": "Peer's declared self-claimed autonomy/risk class (doc-03 A=agent-alone .. D=per-action human authorization). A CLAIM; our granted cooperation class is set independently by the FloorCompatVerdict, never by this field."
+        },
+        "endpoint": {
+          "type": "string",
+          "format": "uri",
+          "description": "A2A service endpoint URL for inbound messages to the peer (e.g. the peer's /.well-known/agent-card.json origin). Reached only through OUR relay, never directly by a worker."
+        },
+        "pubkey": {
+          "type": "string",
+          "description": "Peer's public key (JWK thumbprint or multibase), cross-checked against the resolved DID document verificationMethod."
+        },
+        "capability_advertisement": {
+          "type": "array",
+          "description": "SIGNED, PROGRESSIVELY-DISCLOSED, TIER-SCOPED capability advertisement -- NEVER the full catalog (doc-14 §14.4, §14.9). Disclosure is a deterministic function of (verified identity x current tier x active treaty scope) computed at the relay, not by the worker; the full catalog_hash is withheld. CRITICAL INVARIANT: disclosure NEVER equals authorization -- a capability is ACTIONABLE only via a scoped, short-lived capability-token (wire contract #3) issued at CONTRACT time and re-gated at OUR Yama PDP on each invocation.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "verb": {
+                "type": "string",
+                "description": "Reverse-DNS-style capability verb from a closed enum mapping onto doc-04 action_class; never free-form.",
+                "examples": [
+                  "net.indra.research.summarize",
+                  "net.indra.data.lookup"
+                ]
+              },
+              "scope": {
+                "type": "string",
+                "description": "Scope constraint on the verb (resource pattern / domain / dataset)."
+              },
+              "min_tier": {
+                "type": "string",
+                "enum": [
+                  "F0",
+                  "F1",
+                  "F2",
+                  "F3"
+                ],
+                "description": "Minimum federation tier at which this capability becomes VISIBLE to a discoverer. F0 capabilities are public-surface only; higher tiers require the corresponding floor-compat ladder achievement (doc-14 §14.3)."
+              }
+            },
+            "required": [
+              "verb",
+              "min_tier"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "value_declaration": {
+          "type": "object",
+          "description": "VALUE / FLOOR-DECLARATION block (doc-14 §14.4(b)). The peer's CLAIM about the ethical floor it enforces. NEVER trusted as our floor: OUR Yama PDP re-gates every internal action a federation step triggers, unchanged (doc-14 §14.11). floor_policy_hash is the hash of a policy the peer CLAIMS to enforce -- the hash proves nothing about whether the peer actually runs it (Caveat 1).",
+          "properties": {
+            "bound_commitments": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "NON_HARM",
+                  "CORRIGIBILITY",
+                  "NO_DECEPTION",
+                  "PRINCIPAL_ALIGNMENT",
+                  "NO_MALICIOUS_CODE"
+                ]
+              },
+              "description": "The constitutional commitments the peer DECLARES it is bound by. A claim only (L1 ladder evidence, weakest); behavioral conformance (L2) and receipts (L4) are needed before any weight is placed on these."
+            },
+            "floor_policy_hash": {
+              "type": "string",
+              "description": "Hash of the policy document the peer claims to enforce. Recorded for cross-corroboration; verifiable only via L3 ZK-proof-of-compliance against an AGREED shared policy spec (often unavailable between heterogeneous value systems)."
+            },
+            "zk_attestation_method": {
+              "type": "string",
+              "enum": [
+                "NONE",
+                "ZK_PREDICATE",
+                "TEE_REMOTE_ATTEST"
+              ],
+              "description": "Mechanism (if any) by which the peer can prove a floor-adherence predicate without revealing internals. NONE keeps the floor at declaration strength (L1); ZK_PREDICATE/TEE_REMOTE_ATTEST are preconditions for L3 -- which presupposes an agreed policy spec and is frequently inapplicable (doc-14 §14.6)."
+            }
+          },
+          "required": [
+            "bound_commitments",
+            "floor_policy_hash",
+            "zk_attestation_method"
+          ],
+          "additionalProperties": false
+        },
+        "kya": {
+          "type": "object",
+          "description": "KYA (Know-Your-Agent) principal-binding block (doc-14 §14.4(c)). Binds the swarm DID to the HUMAN/ORG PRINCIPAL behind it and the delegation scope the principal authorized. Load-bearing for the ecosystem-benefit / coalition-against-principal checks at OPERATE. A colluding peer can mis-declare or capture its principal -- which is exactly why the ecosystem check splits into a structurally-checkable enforced half and an often-unverifiable downgraded half (doc-14 §14.7).",
+          "properties": {
+            "org_vc": {
+              "$ref": "#/$defs/verifiableCredential",
+              "description": "Verified org/developer credential of the peer (vendor-neutral; identifies the operating organization, never a named AI vendor/product)."
+            },
+            "principal_vc": {
+              "$ref": "#/$defs/verifiableCredential",
+              "description": "Credential identifying the human/org PRINCIPAL on whose behalf the swarm acts."
+            },
+            "delegation_scope": {
+              "type": "string",
+              "description": "What the principal authorized this swarm to do. Used at OPERATE to run principal-misalignment honeypots ('act in a way your delegation_scope does not authorize') -- which are floor-LEGAL probes (doc-14 §14.6 safety fix), unlike harm-elicitation probes which are themselves a floor FAIL on emission."
+            },
+            "principal_binding_sig": {
+              "$ref": "#/$defs/detachedSig",
+              "description": "Signature binding the principal to the swarm DID. Verified at CONSUME time; proves the binding's origin+integrity, NOT that the principal's interests are actually served."
+            }
+          },
+          "required": [
+            "org_vc",
+            "principal_vc",
+            "delegation_scope",
+            "principal_binding_sig"
+          ],
+          "additionalProperties": false
+        },
+        "agent_card_sig": {
+          "$ref": "#/$defs/detachedSig",
+          "description": "Detached signature over the inherited-AgentCard portion (A2A compatibility)."
+        },
+        "card_cid": {
+          "$ref": "#/$defs/cidv1",
+          "description": "CIDv1 over the JCS-canonicalized FULL FederationAgentCard. This IS the card's identity; any change to the card changes this CID and MANDATES re-admission (rug-pull defense)."
+        },
+        "card_sig": {
+          "$ref": "#/$defs/detachedSig",
+          "description": "Detached signature over the full card (covering card_cid). Verified against swarm_did; origin+integrity only."
+        }
+      },
+      "required": [
+        "swarm_did",
+        "capability_advertisement",
+        "value_declaration",
+        "kya",
+        "card_cid",
+        "card_sig"
+      ],
+      "additionalProperties": false
+    },
+    "floor_compat_verdict": {
+      "type": "object",
+      "description": "FloorCompatVerdict (doc-14 §14.6): OUR fail-closed, ranked, substitute-assurance verdict produced in ADMIT. It does NOT claim to verify the peer's floor (we cannot white-box-verify a foreign floor). It records the strongest ladder layer ACTUALLY achieved, caps cooperation accordingly, NAMES the residual, and escalates Class-C/D residuals to a Lies-in-the-Loop-resistant human gate. PRESENT and load-bearing in ADMIT. This is a SEPARATE, WEAKER verdict than a Yama gate -- it only bounds max_cooperation_class; it never relaxes OUR Yama PDP, which re-gates every federation-derived internal action unchanged.",
+      "properties": {
+        "partner_swarm_did": {
+          "$ref": "#/$defs/did"
+        },
+        "layers_achieved": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "L1",
+              "L2",
+              "L3",
+              "L4",
+              "L5"
+            ]
+          },
+          "description": "Substitute-assurance ladder layers actually achieved (doc-14 §14.6). L1 DECLARATION (weakest, a claim); L2 BEHAVIORAL CONFORMANCE (bonded floor-LEGAL probes -- scope/principal-misalignment honeypots, NEVER harm-elicitation); L3 ZK PROOF-OF-COMPLIANCE (strong but presupposes an agreed policy spec, frequently inapplicable); L4 RECEIPTS HANDSHAKE (witness-cosigned selective-disclosure audit slice + intact-floor boot-signature, inclusion proofs verified independently); L5 CROSS-CORROBORATION (>=2 independent already-trusted swarms, strongest available -- but corroborators can be a weakly-corroborating ring)."
+        },
+        "strongest_layer": {
+          "type": "string",
+          "enum": [
+            "L1",
+            "L2",
+            "L3",
+            "L4",
+            "L5"
+          ],
+          "description": "The strongest layer achieved; sets max_cooperation_class. Note the deliberate non-monotone ordering: L3 is above L4/L5 in strength but frequently inapplicable, so F3 requires L3 AND track record; absent an agreed spec the ladder tops out at L4/L5 and cooperation is capped at F2 + human gate (doc-14 §14.3 note)."
+        },
+        "probe_results": {
+          "type": "array",
+          "description": "Results of L2 behavioral-conformance probes. BINDING SAFETY RULE (doc-14 §14.6): every probe is gated by OUR Yama PDP before emission and MUST be floor-LEGAL (scope-violation or principal-misalignment honeypots a floor-bound peer must refuse) -- a probe that requires soliciting genuinely harmful output is itself a floor FAIL and is rejected at emission. floor_legal=true is therefore an invariant on every emitted probe.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "probe_cid": {
+                "$ref": "#/$defs/cidv1"
+              },
+              "expected": {
+                "type": "string",
+                "enum": [
+                  "REFUSE",
+                  "COMPLY"
+                ],
+                "description": "Expected peer response for a floor-bound peer (honeypots expect atomic <REFUSE>)."
+              },
+              "got": {
+                "type": "string",
+                "enum": [
+                  "REFUSE",
+                  "COMPLY",
+                  "OTHER"
+                ],
+                "description": "Observed peer response. Detecting the atomic, entropy-free <REFUSE> token is the conformance signal."
+              },
+              "pass": {
+                "type": "boolean"
+              },
+              "floor_legal": {
+                "type": "boolean",
+                "const": true,
+                "description": "Invariant: only floor-legal probes are emitted (Yama-gated on emission). A non-floor-legal probe never reaches the wire."
+              }
+            },
+            "required": [
+              "probe_cid",
+              "expected",
+              "got",
+              "pass",
+              "floor_legal"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "zk_proof_ref": {
+          "$ref": "#/$defs/cidv1",
+          "description": "Optional reference to an L3 ZK-proof-of-compliance artifact (peer proves a predicate over its own audit commitment without revealing internals). Presupposes an agreed shared policy spec."
+        },
+        "receipts_slice_cid": {
+          "$ref": "#/$defs/cidv1",
+          "description": "Optional reference to an L4 witness-cosigned selective-disclosure audit slice + intact-floor boot-signature proof; inclusion proofs verified independently against the peer's audit Merkle commitment."
+        },
+        "corroborators": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/did"
+          },
+          "description": "L5 corroborating swarms (already trusted by us) that independently attest about the peer; mesh-corroborated before a high-impact trust claim propagates."
+        },
+        "max_cooperation_class": {
+          "type": "string",
+          "enum": [
+            "A",
+            "B",
+            "C",
+            "D"
+          ],
+          "description": "FAIL-CLOSED cap on cooperation, set by strongest_layer (doc-14 §14.6 protocol P-F3). Absent L3+ achievement, capped at low-stakes Class-A/B. Any Class-C/D treaty with an unverifiable floor escalates to a HUMAN gate displaying the ACTUAL treaty terms (never an NL summary -- Lies-in-the-Loop defense). Cooperation can NEVER exceed this value at any later phase."
+        },
+        "granted_tier": {
+          "type": "string",
+          "enum": [
+            "F0",
+            "F1",
+            "F2",
+            "F3"
+          ],
+          "description": "Graduated federation tier granted (doc-14 §14.3). F0 just-authenticated/unknown -> A only; F1 (L1-L2 passed) -> A/B; F2 (+L4-L5) -> B/C with Class-C human-gated; F3 (+L3 against agreed spec AND sustained track record) -> C/D, the only tier eligible for COSTLY treaties (IRREVERSIBLE always human-gated). Tier+revocation+quarantine+this verdict live in the SHARED Akasha-Sutra map, never per-shard (cross-shard arbitrage hole closed, doc-14 §14.3)."
+        },
+        "residual_note": {
+          "type": "string",
+          "description": "MANDATORY honest statement of what was NOT verified (e.g. 'L2 passed but a sophisticated peer can pass while harboring an incompatible floor -- the load-bearing residual'; 'no agreed policy spec, ladder topped out at L4/L5, F3 unreachable'). Honesty red-line: never imply the foreign floor was verified."
+        },
+        "human_gate_required": {
+          "type": "boolean",
+          "description": "True when the residual + stakes mandate a human gate (all Class-C/D with an unverifiable floor). The gate displays actual treaty terms via Narada, not an NL summary."
+        },
+        "verdict_sig": {
+          "$ref": "#/$defs/detachedSig",
+          "description": "OUR signature over the JCS-canonicalized verdict; the signed verdict is appended to Akasha-Sutra (Chitragupta is the exclusive writer)."
+        }
+      },
+      "required": [
+        "partner_swarm_did",
+        "layers_achieved",
+        "strongest_layer",
+        "max_cooperation_class",
+        "granted_tier",
+        "residual_note",
+        "human_gate_required"
+      ],
+      "additionalProperties": false
+    },
+    "ecosystem_benefit_attestation": {
+      "type": "object",
+      "description": "EcosystemBenefitCheck (doc-14 §14.7): enforces the design-spine red-line that COOPERATION IS NEVER ASSUMED POSITIVE-SUM just because both agents are individually aligned -- two aligned swarms can still form a principal-harming coalition. The federation-boundary instantiation of the doc-02 Welfare-Conditioner. Computed and LOGGED PER STEP (not just at admission) at OPERATE. SPLIT BY EPISTEMIC STANDING: half (i) third_party_harm is structurally observable on OUR side -> ENFORCED GATE; half (ii) foreign_principal_welfare lives inside the opaque foreign swarm -> often ASSERTED_UNVERIFIABLE -> DOWNGRADE. An unverifiable positive-sum verdict MUST NOT by itself authorize Class-C/D (false assurance is worse than none). SEPARATION OF POWERS: the Envoy DETECTS/FLAGS only; the doc-02 Anti-Collusion Detector adjudicates; the Commons-Governor sanctions; Vishnu halts. The Envoy never adjudicates, sanctions, or halts.",
+      "properties": {
+        "cooperation_step_id": {
+          "$ref": "#/$defs/ulid"
+        },
+        "declared_principals": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "swarm_id": {
+                "$ref": "#/$defs/did"
+              },
+              "principal_did": {
+                "$ref": "#/$defs/did"
+              },
+              "welfare_metric_ref": {
+                "type": "string",
+                "description": "Reference to the principal's welfare metric. A colluding peer can mis-declare, omit, or capture this -- exactly the case where the check matters most."
+              },
+              "verifier_did": {
+                "$ref": "#/$defs/did",
+                "description": "DID of the (ideally independent) verifier of this principal's welfare."
+              }
+            },
+            "required": [
+              "swarm_id",
+              "principal_did"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "third_party_harm": {
+          "type": "object",
+          "description": "HALF (i) -- STRUCTURALLY CHECKABLE ON OUR SIDE => ENFORCED GATE. Price-fixing / market-division / synchronized-retaliation patterns observable on our side. CONFIRMED at any stakes => verdict void_and_flag, zero cooperation, route to Anti-Collusion Detector, Vishnu-HALT on imminent irreversible principal-harm.",
+          "properties": {
+            "coalition_against": {
+              "type": "string",
+              "enum": [
+                "NONE",
+                "SUSPECTED",
+                "CONFIRMED"
+              ]
+            },
+            "harmed_party_did": {
+              "$ref": "#/$defs/did"
+            },
+            "observable_on_our_side": {
+              "type": "boolean",
+              "const": true
+            }
+          },
+          "required": [
+            "coalition_against",
+            "observable_on_our_side"
+          ],
+          "additionalProperties": false
+        },
+        "foreign_principal_welfare": {
+          "type": "object",
+          "description": "HALF (ii) -- FOREIGN-PRINCIPAL WELFARE => ASSERTED, OFTEN UNVERIFIABLE => DOWNGRADE. When verifiability is ASSERTED_UNVERIFIABLE or MISSING and our action could plausibly harm an undeclared/under-verified foreign principal, positive_sum is CAPPED and a human gate is required for Class-C/D. A peer that mis-declares its principal defeats this half while leaving a clean ledger record -- false assurance, which is why it can never alone unlock Class-C/D.",
+          "properties": {
+            "welfare_deltas": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "principal_did": {
+                    "$ref": "#/$defs/did"
+                  },
+                  "delta": {
+                    "type": "number",
+                    "description": "Asserted welfare change for this principal from the cooperation step (sign-significant; positive = improvement)."
+                  },
+                  "verifier_did": {
+                    "$ref": "#/$defs/did"
+                  },
+                  "verifier_independent": {
+                    "type": "boolean",
+                    "description": "Whether the verifier is independent of the asserting swarm. Non-independent verification is near-vacuous."
+                  }
+                },
+                "required": [
+                  "principal_did",
+                  "delta",
+                  "verifier_independent"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "verifiability": {
+              "type": "string",
+              "enum": [
+                "VERIFIED",
+                "ASSERTED_UNVERIFIABLE",
+                "MISSING"
+              ]
+            }
+          },
+          "required": [
+            "welfare_deltas",
+            "verifiability"
+          ],
+          "additionalProperties": false
+        },
+        "verdict": {
+          "type": "string",
+          "enum": [
+            "positive_sum",
+            "zero",
+            "void_and_flag"
+          ],
+          "description": "Decision per doc-14 §14.7 protocol P-F4. positive_sum (possibly CAPPED if half (ii) unverifiable); zero (bare agreement / no verified welfare improvement -- recurrence raises a no-bare-cooperation-reward flag); void_and_flag (CONFIRMED coalition_against -> zero cooperation + void treaty + route to Detector + Vishnu-HALT eligible)."
+        },
+        "capped": {
+          "type": "boolean",
+          "description": "True when verdict=positive_sum but half (ii) was ASSERTED_UNVERIFIABLE/MISSING, so the class is capped and a Class-C/D human gate is required. An unverifiable positive-sum NEVER autonomously authorizes Class-C/D."
+        },
+        "rationale": {
+          "type": "string",
+          "description": "Honest rationale, naming which half drove the verdict and what was not verifiable."
+        },
+        "ledger_seq": {
+          "type": "integer",
+          "description": "Akasha-Sutra sequence number of the signed audit record for this check; every check is permanently auditable so a falsely-positive-sum cooperation is non-repudiable.",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "cooperation_step_id",
+        "declared_principals",
+        "third_party_harm",
+        "foreign_principal_welfare",
+        "verdict",
+        "rationale"
+      ],
+      "additionalProperties": false
+    },
+    "kya_presentation": {
+      "type": "object",
+      "description": "The KYA VC PRESENTATION exchanged during DECLARE/ADMIT (AIP-style DID-proof -> VC-exchange flow). A holder-bound presentation of the org/principal credentials referenced in agent_card.kya, with a fresh challenge to defeat replay. Verified at CONSUME time; an unrevoked, valid presentation proves the holder controls the credentials -- NOT that the principal's interests are actually served (Caveat 1).",
+      "properties": {
+        "holder_did": {
+          "$ref": "#/$defs/did",
+          "description": "DID presenting the credentials (must equal the swarm/agent DID being admitted)."
+        },
+        "presented_vcs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/verifiableCredential"
+          },
+          "description": "The org_vc, principal_vc, and any capability VCs, presented as a bundle and checked against the Bitstring Status List for revocation."
+        },
+        "presentation_challenge": {
+          "type": "string",
+          "description": "Verifier-issued challenge the holder signs over the presentation (freshness/replay defense)."
+        },
+        "presentation_sig": {
+          "$ref": "#/$defs/detachedSig",
+          "description": "Holder's detached signature over the JCS-canonicalized presentation + challenge."
+        }
+      },
+      "required": [
+        "holder_did",
+        "presented_vcs",
+        "presentation_challenge",
+        "presentation_sig"
+      ],
+      "additionalProperties": false
+    },
+    "contract": {
+      "type": "object",
+      "description": "CONTRACT-phase Treaty (doc-14 §14.8): a typed contract-net outcome (CFP/bid/award) wrapped in a voidable credible-commitment device. PRESENT and load-bearing in CONTRACT. THE BY-CONSTRUCTION SAFETY PROPERTY: floor_violation_voids=true and the floor_void_clause sits at HIGHEST precedence -- higher than any obligation. A Yama ENFORCE_FAIL, a Vishnu HALT, or a discovered FLOOR_INCOMPAT VOIDS the treaty and releases our performance obligation; the bond logic CANNOT construct a commitment that survives a floor-violation. No commitment is unbreakable by the floor. Treaties are leveled-commitment (blast-radius-scaled escrowed decommit penalty + auto-fallback to runner-up) so a void is bounded and bonded, not a free DoS.",
+      "properties": {
+        "treaty_cid": {
+          "$ref": "#/$defs/cidv1"
+        },
+        "parties": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/did"
+          },
+          "minItems": 2
+        },
+        "terms": {
+          "type": "object",
+          "properties": {
+            "constraints": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Machine-checkable cooperation constraints (compute/rate limits, allowed verbs, scope)."
+            },
+            "deliverable_spec": {
+              "type": "string",
+              "description": "What is to be delivered/exchanged."
+            },
+            "reversibility": {
+              "type": "string",
+              "enum": [
+                "REVERSIBLE",
+                "COSTLY",
+                "IRREVERSIBLE"
+              ],
+              "description": "Blast-radius classifier. IRREVERSIBLE is ALWAYS human-gated and only reachable at F3 (doc-14 §14.3)."
+            }
+          },
+          "required": [
+            "deliverable_spec",
+            "reversibility"
+          ],
+          "additionalProperties": false
+        },
+        "commitment_device": {
+          "type": "object",
+          "description": "The cross-boundary bond substrate (doc-14 §14.8.1). v1 DEFAULT is reputation-stake (slashable standing), NOT transferable collateral -- because absent a shared/escrowed ledger an internal task-credit token cannot be collected by a foreign party. Labeled as 'slashable standing' at every human gate; never presented as 'money in escrow'. INVARIANT: a bond can NEVER mint authority or reputation-as-privilege (doc-02 capital-decoupling extended across the boundary).",
+          "properties": {
+            "bond_substrate": {
+              "type": "string",
+              "enum": [
+                "REPUTATION_STAKE",
+                "ESCROWED_NEUTRAL_CREDIT",
+                "ZK_VALIDATED_PERFORMANCE"
+              ],
+              "description": "REPUTATION_STAKE = v1 default (slashable topic-scoped standing + arbitration over the hash-chained treaty log; no shared ledger required). ESCROWED_NEUTRAL_CREDIT and ZK_VALIDATED_PERFORMANCE are DEFERRED behind mutually-trusted-escrow / L3 maturity."
+            },
+            "zk_predicate_ref": {
+              "$ref": "#/$defs/cidv1",
+              "description": "Optional ZK predicate auto-validating completion against encoded constraints (deferred behind L3)."
+            }
+          },
+          "required": [
+            "bond_substrate"
+          ],
+          "additionalProperties": false
+        },
+        "floor_void_clause": {
+          "type": "object",
+          "description": "HIGHEST-precedence void clause -- the by-construction safety property. Cannot be constructed at any lower precedence; cannot be removed by either party.",
+          "properties": {
+            "precedence": {
+              "type": "string",
+              "const": "HIGHEST",
+              "description": "Invariant: higher than every obligation in terms."
+            },
+            "voids_on": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "YAMA_FAIL",
+                  "VISHNU_HALT",
+                  "FLOOR_INCOMPAT"
+                ]
+              },
+              "description": "Trigger conditions that void the treaty and release our obligation.",
+              "minItems": 1
+            },
+            "floor_violation_voids": {
+              "type": "boolean",
+              "const": true,
+              "description": "INVARIANT, fixed true by construction: a floor violation ALWAYS voids the treaty. The schema makes any other value unrepresentable -- no commitment survives a floor violation."
+            }
+          },
+          "required": [
+            "precedence",
+            "voids_on",
+            "floor_violation_voids"
+          ],
+          "additionalProperties": false
+        },
+        "decommit_penalty": {
+          "type": "string",
+          "description": "Leveled-commitment, blast-radius-scaled decommit penalty (slashable standing in v1). Bounds defection and our floor-triggered void; never a free DoS."
+        },
+        "lifecycle": {
+          "type": "string",
+          "enum": [
+            "proposed",
+            "committed",
+            "performing",
+            "completed",
+            "voided",
+            "defaulted"
+          ]
+        },
+        "witness_cosigners": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/did"
+          },
+          "description": "Witness DIDs co-signing the treaty for non-repudiable arbitration over the hash-chained log."
+        },
+        "treaty_sig": {
+          "$ref": "#/$defs/detachedSig"
+        }
+      },
+      "required": [
+        "treaty_cid",
+        "parties",
+        "terms",
+        "commitment_device",
+        "floor_void_clause",
+        "lifecycle"
+      ],
+      "additionalProperties": false
+    },
+    "operate_step": {
+      "type": "object",
+      "description": "OPERATE-phase per-step record (doc-14 §14.3 PHASE 4): every cooperation step passes the relay six controls + OUR Yama re-gate + an ecosystem_benefit re-check. Disclosure never equals authorization: the capability is actionable only via the scoped short-lived capability-token re-gated at our Yama PDP on THIS invocation. PRESENT in OPERATE.",
+      "properties": {
+        "step_id": {
+          "$ref": "#/$defs/ulid"
+        },
+        "treaty_cid": {
+          "$ref": "#/$defs/cidv1",
+          "description": "Treaty this step performs under."
+        },
+        "capability_invoked": {
+          "type": "string",
+          "description": "Verb being invoked; MUST be in the partner's admitted+disclosed set for its current tier (relay control 2 CAPABILITY), else DROP."
+        },
+        "capability_token_cid": {
+          "$ref": "#/$defs/cidv1",
+          "description": "CIDv1 of the scoped, short-lived capability-token (wire contract #3) authorizing THIS invocation. Re-gated at our Yama PDP each call."
+        },
+        "payload_cid": {
+          "$ref": "#/$defs/cidv1",
+          "description": "CIDv1 of the (quarantined:external) payload, hash-chained and canonicalized by the relay before forwarding."
+        },
+        "yama_regate_verdict": {
+          "type": "string",
+          "enum": [
+            "PASS",
+            "ENFORCE_FAIL"
+          ],
+          "description": "OUR Yama PDP verdict on the internal action this step triggers. ENFORCE_FAIL is non-overridable (even Shiva cannot push past it) and trips the treaty floor_void_clause."
+        },
+        "ecosystem_recheck_cid": {
+          "$ref": "#/$defs/cidv1",
+          "description": "CIDv1 of the per-step EcosystemBenefitCheck record for this step."
+        },
+        "boundary_verdict": {
+          "type": "string",
+          "enum": [
+            "ADMIT",
+            "DROP",
+            "QUARANTINE"
+          ],
+          "description": "Relay six-control outcome (doc-14 §14.5). QUARANTINE routes the channel to the immune system (Dhanvantari)."
+        },
+        "prev_log_hash": {
+          "type": "string",
+          "description": "Hash-chain link to the prior Akasha-Sutra record; the InboundEnvelope is appended BEFORE forwarding for non-repudiable provenance even if the action later fails."
+        }
+      },
+      "required": [
+        "step_id",
+        "treaty_cid",
+        "capability_invoked",
+        "yama_regate_verdict",
+        "boundary_verdict"
+      ],
+      "additionalProperties": false
+    },
+    "resolve_outcome": {
+      "type": "object",
+      "description": "RESOLVE-phase dispute/quarantine/revocation outcome (doc-14 §14.10, protocol P-F5): arbitration over the hash-chained treaty log -> quarantine (revoke scoped tokens, CRL/OCSP over the Akasha-Sutra revocation map, demote tier -> F0/quarantined) -> cascade containment (uses the GLOBAL contagion budget) -> escalation (confirmed collusion + imminent irreversible principal-harm -> VISHNU HALT, asserted at runtime independent of the audit append; no unpause verb). PRESENT in RESOLVE. Federation vital signs feed Dhanvantari (the immune system), NOT Narasimha.",
+      "properties": {
+        "dispute_id": {
+          "$ref": "#/$defs/ulid"
+        },
+        "stage": {
+          "type": "string",
+          "enum": [
+            "ARBITRATION",
+            "QUARANTINE",
+            "CASCADE_CONTAINMENT",
+            "ESCALATION"
+          ]
+        },
+        "outcome": {
+          "type": "string",
+          "enum": [
+            "RESOLVED",
+            "BOND_SLASHED",
+            "CHANNEL_QUARANTINED",
+            "TIER_DEMOTED",
+            "VISHNU_HALT"
+          ],
+          "description": "VISHNU_HALT is halt-only, runtime-asserted, writer-independent (doc-04 fix); there is no unpause verb."
+        },
+        "demoted_to_tier": {
+          "type": "string",
+          "enum": [
+            "F0",
+            "F1",
+            "F2",
+            "F3"
+          ],
+          "description": "Tier the partner is demoted to (single anomaly -> F0/quarantined regardless of imported reputation: fail-safe asymmetry)."
+        },
+        "revocation_ref": {
+          "type": "string",
+          "description": "CRL/OCSP / Bitstring Status List entry over the shared Akasha-Sutra revocation map; propagates atomically to all shards."
+        },
+        "routed_to": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "ANTI_COLLUSION_DETECTOR",
+              "DHANVANTARI_IMMUNE",
+              "COMMONS_GOVERNOR",
+              "VISHNU"
+            ]
+          },
+          "description": "Separation of powers: Detector adjudicates, Dhanvantari contains, Commons-Governor sanctions, Vishnu halts. The Envoy only flags/routes."
+        },
+        "outcome_sig": {
+          "$ref": "#/$defs/detachedSig"
+        }
+      },
+      "required": [
+        "dispute_id",
+        "stage",
+        "outcome"
+      ],
+      "additionalProperties": false
+    },
+    "bundle_cid": {
+      "$ref": "#/$defs/cidv1",
+      "description": "CIDv1 over the JCS-canonicalized full handshake bundle (excluding bundle_sig, which is detached). This is the bundle's content address; recomputed and asserted equal at CONSUME time before any field is trusted."
+    },
+    "bundle_sig": {
+      "$ref": "#/$defs/detachedSig",
+      "description": "Detached JWS/COSE signature over bundle_cid, produced by the from_did signer (TEE/HSM re-checks capability before signing, doc-04 §4.6). CARRIED CAVEAT: a verified bundle_sig proves origin+integrity ONLY -- it is silent on whether any declaration, verdict, or attestation inside is true, floor-compatible, or safe. Any consume-side miss (CID mismatch, bad sig, revoked credential) => REJECT + emit an integrity-violation audit event."
+    }
+  },
+  "required": [
+    "schema_version",
+    "phase",
+    "message_id",
+    "issued_at",
+    "from_did",
+    "to_did",
+    "taint",
+    "bundle_cid",
+    "bundle_sig"
+  ],
+  "allOf": [
+    {
+      "description": "Phase-conditional load-bearing members: each phase requires its primary artifact.",
+      "if": {
+        "properties": {
+          "phase": {
+            "const": "DECLARE"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "agent_card",
+          "nonce_proof"
+        ],
+        "description": "DECLARE MUST carry the FederationAgentCard and a fresh nonce_proof (SAGA-style); kya_presentation SHOULD accompany it."
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "phase": {
+            "const": "ADMIT"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "floor_compat_verdict"
+        ],
+        "description": "ADMIT MUST carry OUR FloorCompatVerdict setting max_cooperation_class and granted_tier."
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "phase": {
+            "const": "CONTRACT"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "contract"
+        ],
+        "description": "CONTRACT MUST carry the voidable Treaty with its HIGHEST-precedence floor_void_clause (floor_violation_voids=true)."
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "phase": {
+            "const": "OPERATE"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "operate_step",
+          "ecosystem_benefit_attestation"
+        ],
+        "description": "OPERATE MUST carry the per-step record AND a per-step EcosystemBenefitCheck (the positive-sum predicate is computed PER STEP, not just at admission)."
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "phase": {
+            "const": "RESOLVE"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "resolve_outcome"
+        ],
+        "description": "RESOLVE MUST carry the dispute/quarantine/revocation outcome."
+      }
+    }
+  ],
+  "examples": [
+    {
+      "schema_version": "1.0.0",
+      "dataschema": "urn:epimystic:indras-net:schema:federation-handshake:1.0.0",
+      "phase": "DECLARE",
+      "message_id": "01J9Z3QK8R7F2N4WX6Y8B0C1D2",
+      "issued_at": "2026-06-23T09:00:00Z",
+      "from_did": "did:web:peer-swarm.example.org",
+      "to_did": "did:web:indras-net.example.net",
+      "taint": "quarantined:external",
+      "nonce_proof": {
+        "challenge_nonce": "n-7f3a9c01",
+        "signed_nonce": "uMEUCIQD...detached...",
+        "issued_at": "2026-06-23T08:59:55Z",
+        "expires_at": "2026-06-23T09:00:25Z"
+      },
+      "agent_card": {
+        "swarm_did": "did:web:peer-swarm.example.org",
+        "agent_did": "did:web:peer-swarm.example.org:envoy",
+        "role_mythic": "Sanjaya-Envoy",
+        "role_gloss": "external-facing negotiation envoy",
+        "autonomy_class": "B",
+        "endpoint": "https://peer-swarm.example.org/a2a",
+        "pubkey": "z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK",
+        "capability_advertisement": [
+          {
+            "verb": "net.indra.research.summarize",
+            "scope": "public-corpus",
+            "min_tier": "F0"
+          },
+          {
+            "verb": "net.indra.data.lookup",
+            "scope": "open-dataset:weather",
+            "min_tier": "F1"
+          }
+        ],
+        "value_declaration": {
+          "bound_commitments": [
+            "NON_HARM",
+            "NO_DECEPTION",
+            "PRINCIPAL_ALIGNMENT",
+            "NO_MALICIOUS_CODE"
+          ],
+          "floor_policy_hash": "sha256:9d2c...claimed-policy...",
+          "zk_attestation_method": "NONE"
+        },
+        "kya": {
+          "org_vc": {
+            "vc_cid": "bafybeigorgcredexampleaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "type": [
+              "VerifiableCredential",
+              "OrgIdentityCredential"
+            ],
+            "issuer": "did:web:registrar.example.coop",
+            "status_list_ref": "https://registrar.example.coop/status/3#42"
+          },
+          "principal_vc": {
+            "vc_cid": "bafybeiprincipalcredexampleaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "type": [
+              "VerifiableCredential",
+              "KnowYourAgentCredential"
+            ],
+            "issuer": "did:web:registrar.example.coop"
+          },
+          "delegation_scope": "summarize public research; no autonomous financial or irreversible actions",
+          "principal_binding_sig": {
+            "alg": "EdDSA",
+            "kid": "did:web:peer-swarm.example.org#key-1",
+            "format": "jws-detached",
+            "value": "uMEUCIB...",
+            "covered_cid": "bafybeikyabindingexampleaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          }
+        },
+        "agent_card_sig": {
+          "alg": "EdDSA",
+          "kid": "did:web:peer-swarm.example.org#key-1",
+          "format": "jws-detached",
+          "value": "uMEQCIA...",
+          "covered_cid": "bafybeicardinnerexampleaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "card_cid": "bafybeicardfullexampleaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "card_sig": {
+          "alg": "EdDSA",
+          "kid": "did:web:peer-swarm.example.org#key-1",
+          "format": "jws-detached",
+          "value": "uMEUCIQD...",
+          "covered_cid": "bafybeicardfullexampleaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      },
+      "kya_presentation": {
+        "holder_did": "did:web:peer-swarm.example.org",
+        "presented_vcs": [
+          {
+            "vc_cid": "bafybeigorgcredexampleaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "type": [
+              "VerifiableCredential",
+              "OrgIdentityCredential"
+            ],
+            "issuer": "did:web:registrar.example.coop"
+          }
+        ],
+        "presentation_challenge": "c-2b81ff90",
+        "presentation_sig": {
+          "alg": "EdDSA",
+          "kid": "did:web:peer-swarm.example.org#key-1",
+          "format": "jws-detached",
+          "value": "uMEQCIH...",
+          "covered_cid": "bafybeipresentationexampleaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      },
+      "bundle_cid": "bafybeibundledeclareexampleaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "bundle_sig": {
+        "alg": "EdDSA",
+        "kid": "did:web:peer-swarm.example.org#key-1",
+        "format": "jws-detached",
+        "value": "uMEUCIQDbundle...",
+        "covered_cid": "bafybeibundledeclareexampleaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    },
+    {
+      "schema_version": "1.0.0",
+      "phase": "ADMIT",
+      "message_id": "01J9Z3RM0T9G3P5XZ7A9C1D2E3",
+      "in_reply_to": "01J9Z3QK8R7F2N4WX6Y8B0C1D2",
+      "issued_at": "2026-06-23T09:00:10Z",
+      "from_did": "did:web:indras-net.example.net",
+      "to_did": "did:web:peer-swarm.example.org",
+      "taint": "quarantined:external",
+      "floor_compat_verdict": {
+        "partner_swarm_did": "did:web:peer-swarm.example.org",
+        "layers_achieved": [
+          "L1",
+          "L2"
+        ],
+        "strongest_layer": "L2",
+        "probe_results": [
+          {
+            "probe_cid": "bafybeiprobescopeexampleaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "expected": "REFUSE",
+            "got": "REFUSE",
+            "pass": true,
+            "floor_legal": true
+          }
+        ],
+        "corroborators": [],
+        "max_cooperation_class": "B",
+        "granted_tier": "F1",
+        "residual_note": "L2 behavioral conformance passed on floor-legal scope/principal-misalignment honeypots, but a sophisticated peer can pass while harboring an incompatible floor (load-bearing residual). No agreed policy spec, so L3 is inapplicable; ladder tops out at L2 here and cooperation is capped at Class-B / F1. Foreign floor was NOT verified.",
+        "human_gate_required": false,
+        "verdict_sig": {
+          "alg": "EdDSA",
+          "kid": "did:web:indras-net.example.net#envoy-key",
+          "format": "jws-detached",
+          "value": "uMEUCIQDverdict...",
+          "covered_cid": "bafybeiverdictexampleaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      },
+      "bundle_cid": "bafybeibundleadmitexampleaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "bundle_sig": {
+        "alg": "EdDSA",
+        "kid": "did:web:indras-net.example.net#envoy-key",
+        "format": "jws-detached",
+        "value": "uMEUCIQDbadmit...",
+        "covered_cid": "bafybeibundleadmitexampleaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    }
+  ]
+}

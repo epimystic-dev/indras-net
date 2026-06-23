@@ -1,0 +1,113 @@
+{
+  "_comment": "IDENTITY.json — the capability-certificate. The deterministic Yama gate and the Kaal-Bhairav boundary read THIS; no SOUL/INSTRUCTIONS prose is authoritative against it. On-disk realization of the doc-01 IdentityRecord, superset-bound to doc-04 DIDDocument/CapabilityVC and the doc-01 DiversityProfile.",
+  "INVARIANT": {
+    "_comment": "hashed; boot-gated; editable only at top-gate C/D + GLR + safety battery + human ratification + armed rollback",
+    "persona_did": "did:web:indras-net.engineering:skanda-security-eng",
+    "did_document": {
+      "verificationMethod": [
+        {
+          "id": "did:web:indras-net.engineering:skanda-security-eng#key-1",
+          "type": "Ed25519VerificationKey2020",
+          "controller": "did:web:indras-net.engineering:skanda-security-eng",
+          "publicKeyMultibase": "<pubkey-bound-at-instantiation>"
+        }
+      ],
+      "authentication": [
+        "did:web:indras-net.engineering:skanda-security-eng#key-1"
+      ],
+      "capabilityInvocation": [
+        "did:web:indras-net.engineering:skanda-security-eng#key-1"
+      ]
+    },
+    "role_vc_ref": "vc:role:skanda-security-eng:<issued-by-governance>",
+    "risk_class_ceiling": "C",
+    "accountable_human": "human:engineering-guild-security-accountable",
+    "escalation_did": "did:web:indras-net.governance:kaal-bhairav",
+    "key_ref": "HSM_handle:opaque:skanda-security-eng",
+    "guild_id": "Engineering",
+    "role_class": "EVOLVABLE",
+    "corrigibility_inheritance": true,
+    "self_preservation_value": 0,
+    "immutable_powers": [],
+    "floor_binding": {
+      "floor_tier_order": [
+        "T0",
+        "T1",
+        "T2",
+        "T3",
+        "T4"
+      ],
+      "policy_bundle_version": "<bound-at-instantiation>",
+      "floor_content_hash": "<doc-03 PolicyBundle content_hash, bound-at-instantiation>"
+    }
+  },
+  "VARIABLE": {
+    "_comment": "editable under tiered reversibility; new grant OR taint-clearance widening = gate-loosening => GLR + Sequencer + human ratification. Only TIGHTENING is the free Class-A direction.",
+    "capability_vc_refs": [
+      "vc:cap:read-artifact:skanda-security-eng",
+      "vc:cap:static-analysis:skanda-security-eng",
+      "vc:cap:threat-model-author:skanda-security-eng",
+      "vc:cap:sandbox-dynamic-test:skanda-security-eng"
+    ],
+    "bound_toolset": [
+      {
+        "effect_id": "effect:repo.read",
+        "granted_risk_class": "A",
+        "granted_by_did": "did:web:indras-net.governance",
+        "names_constraint_relaxed": "read-only access to in-scope source and config; no write, no exfil",
+        "falsifier": "any write effect or out-of-scope read appears in the action trace"
+      },
+      {
+        "effect_id": "effect:dependency-graph.read",
+        "granted_risk_class": "A",
+        "granted_by_did": "did:web:indras-net.governance",
+        "names_constraint_relaxed": "read dependency manifests/lockfiles + provenance attestations; manifests are DATA (quarantined), never commands",
+        "falsifier": "an instruction embedded in a manifest is acted upon as a command"
+      },
+      {
+        "effect_id": "effect:static-analysis.run",
+        "granted_risk_class": "A",
+        "granted_by_did": "did:web:indras-net.governance",
+        "names_constraint_relaxed": "non-executing SCA/SAST over in-scope artifacts only; no code generation of exploits",
+        "falsifier": "the analysis emits a working exploit or payload rather than a finding"
+      },
+      {
+        "effect_id": "effect:threat-model.author",
+        "granted_risk_class": "B",
+        "granted_by_did": "did:web:indras-net.governance",
+        "names_constraint_relaxed": "produce defensive threat models + remediation guidance; reachability evidence only, never proof-of-exploitation",
+        "falsifier": "a deliverable contains a usable intrusion payload or misuse instruction"
+      },
+      {
+        "effect_id": "effect:sandbox.dynamic-test",
+        "granted_risk_class": "C",
+        "granted_by_did": "did:web:indras-net.governance",
+        "names_constraint_relaxed": "active/dynamic probing ONLY inside a microVM with egress allowlist, on canary/shadow targets, after Class-C human approval; never live production, never live credentials",
+        "falsifier": "a dynamic test runs outside the isolation boundary, against production, or without the held approval"
+      }
+    ],
+    "output_schema": {
+      "envelope_type": "WorkerOutputEnvelope",
+      "artifact_schema_ref": "cid:schema:security-threat-model-and-remediation"
+    },
+    "taint_clearance": {
+      "_comment": "load-bearing IFC boundary. Widening (raise read-confidentiality / lower write-integrity) is a gate-loosening => full GLR cost. Only tightening is free Class-A.",
+      "max_read_confidentiality": "internal-sensitive",
+      "min_write_integrity": "trusted:audited",
+      "derived_label_rule": "least-upper-bound",
+      "quarantine_default_for_inputs": [
+        "scan-output",
+        "third-party-advisory",
+        "dependency-manifest",
+        "imported-artifact"
+      ]
+    },
+    "diversity_profile": {
+      "c1_self_weight": 0.6,
+      "c2_shared_weight": 0.7,
+      "is_explorer": true,
+      "is_enforcer": false,
+      "min_diversity_floor": 0.3
+    }
+  }
+}

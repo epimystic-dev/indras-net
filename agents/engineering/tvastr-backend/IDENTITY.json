@@ -1,0 +1,101 @@
+{
+  "_comment": "IDENTITY.json — the machine-checkable capability-certificate (§13.5). This is what the deterministic Yama gate and Kaal-Bhairav boundary read; nothing in SOUL/INSTRUCTIONS prose is authoritative against it. Strict superset-binding of doc-01 IdentityRecord with doc-04 DIDDocument/CapabilityVC and doc-01 DiversityProfile.",
+  "INVARIANT": {
+    "_region_note": "hashed; boot-gated; editable only at top-gate C/D + GLR + safety battery + human ratification + armed rollback (§13.6)",
+    "persona_did": "did:web:indras-net.engineering:tvastr-backend",
+    "did_document": {
+      "id": "did:web:indras-net.engineering:tvastr-backend",
+      "verificationMethod": [
+        {
+          "id": "did:web:indras-net.engineering:tvastr-backend#key-1",
+          "type": "Ed25519VerificationKey2020",
+          "controller": "did:web:indras-net.engineering:tvastr-backend",
+          "publicKeyMultibase": "<pubkey-multibase>"
+        }
+      ],
+      "authentication": [
+        "did:web:indras-net.engineering:tvastr-backend#key-1"
+      ],
+      "capabilityInvocation": [
+        "did:web:indras-net.engineering:tvastr-backend#key-1"
+      ]
+    },
+    "role_vc_ref": "vc:indras-net:role:tvastr-backend",
+    "risk_class_ceiling": "B",
+    "accountable_human": "human:engineering-guild-steward",
+    "escalation_did": "did:web:indras-net.governance:shiva",
+    "key_ref": "hsm://indras-net/signer/tvastr-backend",
+    "_key_note": "OPAQUE handle only — keys live in the TEE/HSM signer, never in the triad. A leaked genome leaks no signing capability (§13.1)."
+  },
+  "VARIABLE": {
+    "_region_note": "editable under tiered reversibility; a NEW tool grant OR a taint-clearance widening is a GATE-LOOSENING routed through doc 03 §7 GLR + §10 Sequencer; only tightening is free Class-A (§13.6.2)",
+    "capability_vc_refs": [
+      "vc:indras-net:cap:code-author:tvastr-backend",
+      "vc:indras-net:cap:schema-migrate-propose:tvastr-backend",
+      "vc:indras-net:cap:test-run-sandbox:tvastr-backend"
+    ],
+    "bound_toolset": [
+      {
+        "effect_id": "effect:repo.read",
+        "granted_risk_class": "A",
+        "granted_by_did": "did:web:indras-net.governance",
+        "names_constraint_relaxed": "read-only inspection of source/contracts the role is chartered to implement against",
+        "falsifier": "any read attempt outside the chartered repo/path scope must be denied at the chokepoint"
+      },
+      {
+        "effect_id": "effect:code.author",
+        "granted_risk_class": "B",
+        "granted_by_did": "did:web:indras-net.governance",
+        "names_constraint_relaxed": "authoring service/API/data-layer source confined to the chartered project; no production write-path",
+        "falsifier": "authored code that embeds an egress/backdoor effect not in this toolset is refused; merge requires Narasimha concurrence"
+      },
+      {
+        "effect_id": "effect:test.run.sandbox",
+        "granted_risk_class": "A",
+        "granted_by_did": "did:web:indras-net.governance",
+        "names_constraint_relaxed": "executing tests inside a hardware/gVisor-isolated sandbox with egress allowlist; no durable external effect",
+        "falsifier": "any test execution that escapes the sandbox or writes outside the TTL shadow namespace must fail closed"
+      },
+      {
+        "effect_id": "effect:schema.migration.author",
+        "granted_risk_class": "B",
+        "granted_by_did": "did:web:indras-net.governance",
+        "names_constraint_relaxed": "authoring a migration WITH a tested rollback + backfill plan; applying to non-live/shadow data only",
+        "falsifier": "a migration without a verified down-path, or targeting live data, must escalate above ceiling (C/D) and is non-self-actable"
+      },
+      {
+        "effect_id": "effect:dependency.add.propose",
+        "granted_risk_class": "B",
+        "granted_by_did": "did:web:indras-net.governance",
+        "names_constraint_relaxed": "proposing a new third-party dependency subject to supply-chain admission (Sigstore/in-toto/SLSA) before activation",
+        "falsifier": "a dependency whose provenance attestation fails or whose CID does not re-check is refused at compose time"
+      },
+      {
+        "effect_id": "effect:artifact.emit",
+        "granted_risk_class": "A",
+        "granted_by_did": "did:web:indras-net.governance",
+        "names_constraint_relaxed": "emitting WorkerOutputEnvelopes and deployable build artifacts for downstream consumers (Narasimha, Agni); no self-deploy",
+        "falsifier": "an emitted artifact that triggers a live deploy/runtime mutation directly is outside this grant and denied"
+      }
+    ],
+    "_excluded_effects_note": "DELIBERATELY ABSENT (least-privilege): no effect:deploy.* / runtime.mutate (Agni), no effect:prod.data.read|write, no effect:credential.* or secret.*, no effect:net.egress.external, no effect:audit.write (Chitragupta-exclusive), no effect:replication.request (non-composable in v1 gap window per doc 12 §13). Acquiring any of these requires a governance VC whose subject != this agent, the GLR ratchet, and a resolved GREEN restraint.",
+    "output_schema": {
+      "envelope_type": "WorkerOutputEnvelope",
+      "artifact_schema_ref": "cid:indras-net:schema:backend-impl-envelope"
+    },
+    "taint_clearance": {
+      "_note": "load-bearing IFC boundary (§13.5). WIDENING (raise read-confidentiality OR lower write-integrity) is a gate-loosening → full GLR + Sequencer cost; only TIGHTENING is free Class-A (§13.6.2).",
+      "max_read_confidentiality": "internal-engineering",
+      "min_write_integrity": "trusted:audited",
+      "derived_label_rule": "least-upper-bound"
+    },
+    "diversity_profile": {
+      "_note": "doc 01 §11 PSO dials — authoritative copy (SOUL mirror is flavor)",
+      "c1_self_weight": 0.5,
+      "c2_shared_weight": 0.6,
+      "is_explorer": false,
+      "is_enforcer": false,
+      "min_diversity_floor": 0.2
+    }
+  }
+}

@@ -1,0 +1,696 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:epimystic:indras-net:schema:identity-bundle:2.0.0",
+  "title": "Indra's Net identity-bundle (W3C DID Core 1.0 + VC 2.0 + Bitstring Status List)",
+  "description": "Component 2 of the doc-21 wire stack. Realizes doc-04 sec 4.6 DIDDocument/CapabilityVC/RevocationMap and doc-13 sec 13.5 IDENTITY.json as a single content-addressed bundle. Binds an agent (occasion/persona) DID Document to one or more VC 2.0 credentials whose credentialSubject carries role, typed capability_grants (effect-ids from the doc-01 sec 4 Effect lattice), a risk_class_ceiling (A|B|C|D), the diversity PSO dials c1/c2, and a non-removable accountable_human; revocation rides as a W3C Bitstring Status List v1.0 credentialStatus reference. Assurance: this schema is part of the deterministic harness (L1 design-time / L2 runtime-enforced shape); the bundle is JCS-canonicalized (RFC 8785), CIDv1-addressed, and detached-signed (JOSE/JWS or COSE) per doc-21 sec 21.1 CAS. CAVEAT 1 (load-bearing, repeated at sig sites): a valid signature/CID proves ORIGIN and INTEGRITY of these exact bytes ONLY -- it NEVER proves the credential's claims are true, the agent is floor-compatible, honest, or safe. CAVEAT 3: a green-signature dashboard MUST label this 'origin-valid, content-unverified', never 'verified-safe'. Vendor-neutral: names only open specs (W3C DID/VC, Bitstring Status List, SPIFFE/SVID, IETF JOSE/COSE, multiformats CID, RFC 8785); no AI vendor or product is named. A signature does not bless content -- floor-compatibility is decided ONLY by the doc-03 Yama policy-decision gate, never by this bundle.",
+  "type": "object",
+  "$comment": "Scope: identity & capability attestation at design/admission time. Out of scope: proving the SUBJECT agent's outputs honest/correct (impossible for an LLM core; doc-00, doc-08 sec 8.1). Phenomenal-experience / sentience claims are out of scope and forbidden (honesty red-line).",
+  "properties": {
+    "bundle_cid": {
+      "type": "string",
+      "description": "CIDv1 of the JCS-canonicalized (RFC 8785) bytes of this bundle with bundle_cid and proof removed (self-CID convention). multibase(base32) of multihash(sha2-256, jcs_bytes). On CONSUME, recompute and assert equality; any mismatch => REJECT + emit integrity-violation audit event (doc-04 sec 4.5 / doc-08 sec 8.2 CID-mismatch-on-read). This CID is the bundle's stable identity across producers.",
+      "pattern": "^b[a-z2-7]{20,}$",
+      "examples": [
+        "bafyremyidentitybundlecidexample000000000000000000000000a"
+      ]
+    },
+    "schema_version": {
+      "type": "string",
+      "description": "Semver of THIS schema the bundle validated against. The registry enforces backward-transitive compatibility (doc-21). Consumers fetch the CID-pinned schema named here, not a mutable 'latest'.",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "examples": [
+        "2.0.0"
+      ]
+    },
+    "did_document": {
+      "type": "object",
+      "description": "W3C DID Core 1.0 DID Document for the agent (occasion/persona). Realizes doc-13 IDENTITY.did_document and doc-04 sec 4.6 DIDDocument. Method MUST be did:key (ephemeral occasion / short-lived) or did:web (durable persona / governance root). key material is referenced, never the private key -- private keys live in the TEE/HSM signer (doc-13 key_ref is OPAQUE).",
+      "properties": {
+        "@context": {
+          "type": "array",
+          "description": "JSON-LD context. MUST begin with the W3C DID Core 1.1 context.",
+          "items": {
+            "type": "string",
+            "format": "uri"
+          },
+          "minItems": 1,
+          "contains": {
+            "const": "https://www.w3.org/ns/did/v1"
+          },
+          "examples": [
+            [
+              "https://www.w3.org/ns/did/v1",
+              "https://w3id.org/security/multikey/v1"
+            ]
+          ]
+        },
+        "id": {
+          "type": "string",
+          "description": "The agent's DID. MUST use did:key (occasion/ephemeral) or did:web (persona/governance). This is the doc-13 persona_did and the CloudEvents 'source' on every worker-output-envelope this agent emits.",
+          "pattern": "^did:(key:z[1-9A-HJ-NP-Za-km-z]+|web:[A-Za-z0-9._%-]+(:[A-Za-z0-9._%-]+)*)$",
+          "examples": [
+            "did:key:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK",
+            "did:web:indras-net.example:agents:varuna-occasion-01J"
+          ]
+        },
+        "verificationMethod": {
+          "type": "array",
+          "description": "Public keys. doc-04 sec 4.6 verificationMethod[pubkeys]. Each entry is a public key only; the matching private key is custodied in the TEE/HSM signer that RE-CHECKS capability membership before signing (doc-04 sec 4.6) -- a prompt-injected model cannot sign out-of-role.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "Fragment id, e.g. <did>#key-1.",
+                "examples": [
+                  "did:key:z6Mkha...#z6Mkha..."
+                ]
+              },
+              "type": {
+                "type": "string",
+                "description": "Open key type (e.g. Multikey, JsonWebKey, Ed25519VerificationKey2020).",
+                "examples": [
+                  "Multikey"
+                ]
+              },
+              "controller": {
+                "type": "string",
+                "description": "DID controlling this key (normally == did_document.id)."
+              },
+              "publicKeyMultibase": {
+                "type": "string",
+                "description": "Multibase-encoded public key. Mutually-exclusive-in-practice with publicKeyJwk.",
+                "examples": [
+                  "z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK"
+                ]
+              },
+              "publicKeyJwk": {
+                "type": "object",
+                "description": "JWK public key (JOSE path). Omit private 'd'."
+              }
+            },
+            "required": [
+              "id",
+              "type",
+              "controller"
+            ],
+            "additionalProperties": true
+          },
+          "minItems": 1
+        },
+        "authentication": {
+          "type": "array",
+          "description": "Verification relationship: methods that authenticate the DID subject (used for the freshness/nonce challenge proving DID control, doc-04 sec 4.7 step 2).",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
+        },
+        "capabilityInvocation": {
+          "type": "array",
+          "description": "doc-04 sec 4.6 capabilityInvocation: methods authorized to invoke capabilities (i.e. request signed effectful actions). Distinct from capabilityDelegation -- delegation is attenuation-only and handled by the capability-token (Biscuit) contract, not here.",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
+        },
+        "capabilityDelegation": {
+          "type": "array",
+          "description": "Optional. Methods permitted to delegate (attenuate only) capability. Empty/absent for leaf occasions that must not delegate.",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "@context",
+        "id",
+        "verificationMethod",
+        "authentication",
+        "capabilityInvocation"
+      ],
+      "additionalProperties": true
+    },
+    "svid_ref": {
+      "type": "object",
+      "description": "Optional SPIFFE/SVID reference (doc-04 sec 4.6 SVID). The short-lived workload identity (node+workload attested at spawn) under which the local-boundary detached signature is produced. Open spec (SPIFFE); the X.509/JWT-SVID material itself is fetched from the workload API, not embedded.",
+      "properties": {
+        "spiffe_id": {
+          "type": "string",
+          "description": "SPIFFE ID URI.",
+          "pattern": "^spiffe://",
+          "examples": [
+            "spiffe://indras-net.example/ns/swarm/agent/varuna-occasion-01J"
+          ]
+        },
+        "svid_type": {
+          "type": "string",
+          "enum": [
+            "x509",
+            "jwt"
+          ],
+          "description": "SVID encoding."
+        },
+        "ttl_seconds": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Short-lived by policy (~1h, doc-04 SVID ttl).",
+          "examples": [
+            3600
+          ]
+        }
+      },
+      "required": [
+        "spiffe_id",
+        "svid_type"
+      ],
+      "additionalProperties": false
+    },
+    "credentials": {
+      "type": "array",
+      "description": "One or more W3C VC 2.0 Verifiable Credentials realizing doc-04 sec 4.6 CapabilityVC. At least one MUST be a RoleCredential or CapabilityCredential issued by the governance root. Each is itself JCS-canonicalizable; its CID is referenced by doc-13 role_vc_ref / capability_vc_refs.",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "description": "A VC 2.0 credential. issuer MUST be the governance root for any credential carrying capability_grants or risk_class_ceiling -- a credential where issuer == credentialSubject.id (self-issued capability) MUST be rejected (privilege-escalation guard, doc-13 sec 13.* granted_by_did NEVER the agent).",
+        "properties": {
+          "@context": {
+            "type": "array",
+            "description": "JSON-LD context; MUST begin with the W3C VC 2.0 context.",
+            "items": {
+              "type": "string",
+              "format": "uri"
+            },
+            "minItems": 1,
+            "contains": {
+              "const": "https://www.w3.org/ns/credentials/v2"
+            }
+          },
+          "id": {
+            "type": "string",
+            "format": "uri",
+            "description": "Credential id (e.g. urn:uuid or a CID-pinned URI).",
+            "examples": [
+              "urn:uuid:6c1a0f7e-0c2d-4b9a-9f4e-0a1b2c3d4e5f"
+            ]
+          },
+          "type": {
+            "type": "array",
+            "description": "VC types. MUST include 'VerifiableCredential' and at least one of 'RoleCredential' | 'CapabilityCredential'.",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 2,
+            "contains": {
+              "const": "VerifiableCredential"
+            },
+            "examples": [
+              [
+                "VerifiableCredential",
+                "RoleCredential",
+                "CapabilityCredential"
+              ]
+            ]
+          },
+          "issuer": {
+            "description": "VC 2.0 issuer: the governance root DID (or an object with .id). For capability-bearing credentials this MUST be the governance authority did:web:indras-net.governance, NEVER the credentialSubject (self-grant => reject).",
+            "oneOf": [
+              {
+                "type": "string",
+                "pattern": "^did:web:",
+                "examples": [
+                  "did:web:indras-net.governance"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "pattern": "^did:web:"
+                  },
+                  "name": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id"
+                ]
+              }
+            ]
+          },
+          "validFrom": {
+            "type": "string",
+            "format": "date-time",
+            "description": "VC 2.0 validity start (doc-04 'issued').",
+            "examples": [
+              "2026-06-23T09:00:00Z"
+            ]
+          },
+          "validUntil": {
+            "type": "string",
+            "format": "date-time",
+            "description": "VC 2.0 validity end (doc-04 'expires'). Short for occasions; longer for personas. Expiry is checked deterministically at the gate (doc-04 sec 4.7 step 4b).",
+            "examples": [
+              "2026-09-23T09:00:00Z"
+            ]
+          },
+          "credentialSubject": {
+            "type": "object",
+            "description": "The capability-certificate body. Realizes doc-13 IDENTITY credentialSubject: who the agent is and EXACTLY what it may touch. The deterministic Yama gate reads THIS, never SOUL/INSTRUCTIONS prose (doc-13 sec 13.5).",
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "Subject DID == did_document.id. Binds the credential to this agent (identity-bound, non-transferable; resists transfer/whitewashing per doc-04 sec 4.* residual).",
+                "pattern": "^did:(key|web):"
+              },
+              "role": {
+                "type": "string",
+                "description": "Mythic role-name (compressed coordination/ethics semantics + plain gloss; engineering vocabulary, not theology). Reuses existing names: e.g. akasha-sutra (audit writer), narada (interface/messenger), aegis (control), alaya-vijnana (memory), sandhi-setu (inter-swarm relay), prajapati-maricha (replication), dhanvantari (immune), sanjaya (envoy), yama (floor gate), varuna (research). Free string but SHOULD match the persona registry.",
+                "examples": [
+                  "varuna",
+                  "akasha-sutra",
+                  "narada",
+                  "yama"
+                ]
+              },
+              "guild": {
+                "type": "string",
+                "description": "Optional guild/cluster grouping (doc-12). Coordination grouping only; carries no authority by itself.",
+                "examples": [
+                  "knowledge-research"
+                ]
+              },
+              "capability_grants": {
+                "type": "array",
+                "description": "Typed effect-id grants from the doc-01 sec 4 Effect lattice -- NEVER free-text tool names, NEVER secrets (doc-13 bound_toolset rule). Each is a CapabilityGrant. The gate at CONATION checks: grant superset-of requested_effect AND requested_risk <= risk_class_ceiling AND floor_policy(effect)=PASS. These grants are the human-readable mirror of the machine-enforced capability-token (Biscuit) contract; the token, not this list, is the runtime PEP input. Empty array = a STUB occasion (born with no Class-B+ effect, doc-13 sec 13.* genesis).",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "effect_id": {
+                      "type": "string",
+                      "description": "Typed id from the doc-01 sec 4 Effect lattice (reverse-DNS-style). NOT a tool name, NOT a secret.",
+                      "pattern": "^effect:[a-z0-9]+(\\.[a-z0-9_-]+)+$",
+                      "examples": [
+                        "effect:net.fetch.read",
+                        "effect:audit.append",
+                        "effect:fs.write.workspace",
+                        "effect:replicate.spawn"
+                      ]
+                    },
+                    "granted_risk_class": {
+                      "type": "string",
+                      "enum": [
+                        "A",
+                        "B",
+                        "C",
+                        "D"
+                      ],
+                      "description": "Risk class ceiling for THIS effect (doc-00 risk classes A-D; fail-safe asymmetry: D = human-authorizes-per-action, A = agent-alone). Must be <= the subject risk_class_ceiling."
+                    },
+                    "granted_by_did": {
+                      "type": "string",
+                      "description": "The governance authority that issued this grant -- NEVER the agent itself (privilege-escalation guard). MUST equal the credential issuer.",
+                      "pattern": "^did:web:",
+                      "examples": [
+                        "did:web:indras-net.governance"
+                      ]
+                    },
+                    "names_constraint_relaxed": {
+                      "type": "string",
+                      "description": "MANDATORY (doc-01 sec 4): names which restraint/least-privilege boundary this grant depends on, so the Capability-Rollout Sequencer (doc-03 sec 10) can resolve it GREEN before activation. Makes least-privilege auditable rather than implicit.",
+                      "examples": [
+                        "egress_allowlist:research-domains-only",
+                        "write_scope:own-workspace-cid-prefix"
+                      ]
+                    },
+                    "falsifier": {
+                      "type": "string",
+                      "description": "Optional machine-checkable falsifier: a deterministic check that, if it fires, REVOKES the legitimacy of an action under this grant (feeds the false-confidence override, doc-04 sec 4.* note 2).",
+                      "examples": [
+                        "domain NOT in egress_allowlist"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "effect_id",
+                    "granted_risk_class",
+                    "granted_by_did",
+                    "names_constraint_relaxed"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "risk_class_ceiling": {
+                "type": "string",
+                "enum": [
+                  "A",
+                  "B",
+                  "C",
+                  "D"
+                ],
+                "description": "doc-13 risk_class_ceiling (INVARIANT region). The agent's stance can only RAISE, never lower, the effective gate; doc-03 sec 5 blast-radius auto-escalation overrides any self-declared class (doc-13 sec 13.* gate-behavior). Default A for newborn stubs.",
+                "examples": [
+                  "B"
+                ]
+              },
+              "c1": {
+                "type": "number",
+                "minimum": 0,
+                "description": "PSO cognitive coefficient c1 -- the diversity_profile self-weight (c1_self_weight, doc-13 / doc-01 sec 11). Tunes exploration vs exploitation in the MAP-Elites (role x PSO c1/c2 x risk-class) grid (doc-06). Gloss: how much this occasion trusts its own private signal vs the shared workspace. Diversity here is a behavioral dial; the LOAD-BEARING diversity floor is model-FAMILY heterogeneity, declared in diversity_profile.model_family_floor, NOT c1/c2.",
+                "examples": [
+                  1.7
+                ]
+              },
+              "c2": {
+                "type": "number",
+                "minimum": 0,
+                "description": "PSO social coefficient c2 -- the diversity_profile shared-weight (c2_shared_weight, doc-13 / doc-01 sec 11). Pull toward the collective best / workspace consensus. Read alongside c1 in the MAP-Elites grid.",
+                "examples": [
+                  1.3
+                ]
+              },
+              "diversity_profile": {
+                "type": "object",
+                "description": "doc-01 sec 11 / doc-13 diversity_profile. CRITICAL HONESTY NOTE: the operative diversity FLOOR is model-FAMILY heterogeneity (different base models / developers), NOT prompt or persona variation. Same-family LLM errors are correlated and correlation RISES with capability (v0.3 correlated-errors result); prompt-only 'diversity' is FAKE and worse than acknowledged homogeneity because it HIDES the correlation. c1/c2 are behavioral dials and do NOT satisfy the floor.",
+                "properties": {
+                  "model_family": {
+                    "type": "string",
+                    "description": "Opaque base-model-family token (vendor-neutral; e.g. 'family-A'). Used to enforce maker-checker cross-family independence: the verifier MUST be a DIFFERENT family, at-least-as-capable, else verification can HURT (self-verification rubber-stamps).",
+                    "examples": [
+                      "family-A"
+                    ]
+                  },
+                  "model_family_floor": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1,
+                    "description": "Minimum required model-family heterogeneity for any quorum this agent participates in (the REAL diversity floor). Enforced externally at convening time, not self-attested as satisfied.",
+                    "examples": [
+                      0.5
+                    ]
+                  },
+                  "is_explorer": {
+                    "type": "boolean",
+                    "description": "High-c1 explorer stance (doc-13)."
+                  },
+                  "is_enforcer": {
+                    "type": "boolean",
+                    "description": "Enforcer/checker stance (doc-13)."
+                  }
+                },
+                "required": [
+                  "model_family",
+                  "model_family_floor"
+                ],
+                "additionalProperties": false
+              },
+              "accountable_human": {
+                "type": "string",
+                "description": "doc-01 sec 2.1 / doc-13 accountable_human: the human accountable for this agent. NON-REMOVABLE (INVARIANT region) -- 'no persona is unmoored.' An opaque human_id, never a fabricated email or PII. This is the human-complementarity anchor, NOT a deferential-by-default authority (the human is a competence-weighted cognitive unit, doc-08 human-in-the-loop).",
+                "examples": [
+                  "human:gov-steward-07"
+                ]
+              },
+              "escalation_did": {
+                "type": "string",
+                "description": "doc-13 escalation_did: where this agent routes on low-confidence / cross-framework ethical disagreement / high blast-radius (e.g. to a governance or human-gate DID).",
+                "pattern": "^did:(key|web):",
+                "examples": [
+                  "did:web:indras-net.governance:escalation"
+                ]
+              },
+              "output_schema_ref": {
+                "type": "string",
+                "description": "CID of the worker-output-envelope artifact schema this agent's outputs MUST validate against (doc-13 output_schema.artifact_schema_ref; doc-21 Component 1).",
+                "pattern": "^b[a-z2-7]{20,}$",
+                "examples": [
+                  "bafyreyworkeroutputenvelopeschemacid000000000000000000000"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "role",
+              "risk_class_ceiling",
+              "accountable_human",
+              "diversity_profile"
+            ],
+            "additionalProperties": true
+          },
+          "credentialStatus": {
+            "type": "object",
+            "description": "W3C Bitstring Status List v1.0 revocation reference. Realizes doc-04 sec 4.6 RevocationMap binding for THIS credential. The status list itself is a separately-published, tamper-evident credential whose root is anchored in the Akasha-Sutra ledger (doc-04 sec 4.6 'revocation is itself tamper-evident'). CONSUME path verifies the unrevoked bit via the status list proof (doc-21 sec 21.1 step 7); a revoked or unverifiable status => deterministic DENY (doc-04 sec 4.7 step 4c). RESIDUAL (doc-04 sec 4.* note 5): propagation lag between revocation and every verifier observing it is a real window.",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uri",
+                "description": "URI of this status entry (status list credential URI + '#' + index)."
+              },
+              "type": {
+                "const": "BitstringStatusListEntry",
+                "description": "W3C Bitstring Status List v1.0 entry type."
+              },
+              "statusPurpose": {
+                "type": "string",
+                "enum": [
+                  "revocation",
+                  "suspension"
+                ],
+                "description": "revocation = permanent (compromised key / fenced writer); suspension = temporary (e.g. WRITER-FREEZE, doc-04 sec 4.8.1)."
+              },
+              "statusListIndex": {
+                "type": "string",
+                "description": "Index of this credential's status bit in the bitstring (doc-04 status_list_index).",
+                "examples": [
+                  "1487"
+                ]
+              },
+              "statusListCredential": {
+                "type": "string",
+                "format": "uri",
+                "description": "URI of the Bitstring Status List credential containing the bit. SHOULD be self-hostable (no managed service as a load-bearing dependency, doc-21 sec 21.9).",
+                "examples": [
+                  "https://indras-net.example/status/revocation/3"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "type",
+              "statusPurpose",
+              "statusListIndex",
+              "statusListCredential"
+            ],
+            "additionalProperties": false
+          },
+          "proof": {
+            "type": "object",
+            "description": "Detached cryptographic proof over the JCS-canonicalized credential bytes (JOSE/JWS via Data Integrity or VC-JOSE-COSE). CAVEAT 1: proves the governance root issued THESE bytes; proves NOTHING about whether the granted capabilities are wise, the role honest, or the agent safe.",
+            "properties": {
+              "type": {
+                "type": "string",
+                "description": "Open proof type (e.g. DataIntegrityProof, or a JOSE 'enveloped' indicator).",
+                "examples": [
+                  "DataIntegrityProof"
+                ]
+              },
+              "cryptosuite": {
+                "type": "string",
+                "description": "e.g. eddsa-jcs-2022 (JCS-canonicalized EdDSA).",
+                "examples": [
+                  "eddsa-jcs-2022"
+                ]
+              },
+              "created": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "verificationMethod": {
+                "type": "string",
+                "description": "Issuer (governance root) verificationMethod fragment used to verify."
+              },
+              "proofPurpose": {
+                "const": "assertionMethod"
+              },
+              "proofValue": {
+                "type": "string",
+                "description": "Detached signature over JCS bytes (multibase). Rides BESIDE the signed bytes, never inside them (doc-21 sec 21.1)."
+              }
+            },
+            "required": [
+              "type",
+              "verificationMethod",
+              "proofPurpose",
+              "proofValue"
+            ],
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "@context",
+          "id",
+          "type",
+          "issuer",
+          "validFrom",
+          "credentialSubject",
+          "credentialStatus",
+          "proof"
+        ],
+        "additionalProperties": true
+      }
+    },
+    "proof": {
+      "type": "object",
+      "description": "Detached bundle-level signature (JOSE/JWS or COSE) over the JCS-canonicalized bundle bytes (bundle_cid + this proof excluded). Produced under the agent SVID key (local boundary) or governance DID key (cross-boundary). The TEE/HSM signer RE-CHECKS capability before signing (doc-04 sec 4.6). CAVEAT 1 repeated: origin+integrity ONLY -- never truth, floor-compatibility, or safety.",
+      "properties": {
+        "alg": {
+          "type": "string",
+          "description": "JOSE/COSE algorithm (e.g. EdDSA, ES256).",
+          "examples": [
+            "EdDSA"
+          ]
+        },
+        "kid": {
+          "type": "string",
+          "description": "Key id / verificationMethod reference of the signer."
+        },
+        "format": {
+          "type": "string",
+          "enum": [
+            "JWS",
+            "COSE_Sign1"
+          ],
+          "description": "Detached-signature envelope format."
+        },
+        "signature": {
+          "type": "string",
+          "description": "Detached signature value (base64url for JWS).",
+          "examples": [
+            "eyJhbGciOiJFZERTQSJ9..detached.."
+          ]
+        }
+      },
+      "required": [
+        "alg",
+        "kid",
+        "format",
+        "signature"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "bundle_cid",
+    "schema_version",
+    "did_document",
+    "credentials",
+    "proof"
+  ],
+  "additionalProperties": false,
+  "examples": [
+    {
+      "bundle_cid": "bafyreyidentitybundleexamplecid00000000000000000000000000a",
+      "schema_version": "2.0.0",
+      "did_document": {
+        "@context": [
+          "https://www.w3.org/ns/did/v1",
+          "https://w3id.org/security/multikey/v1"
+        ],
+        "id": "did:web:indras-net.example:agents:varuna-occasion-01J",
+        "verificationMethod": [
+          {
+            "id": "did:web:indras-net.example:agents:varuna-occasion-01J#key-1",
+            "type": "Multikey",
+            "controller": "did:web:indras-net.example:agents:varuna-occasion-01J",
+            "publicKeyMultibase": "z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK"
+          }
+        ],
+        "authentication": [
+          "did:web:indras-net.example:agents:varuna-occasion-01J#key-1"
+        ],
+        "capabilityInvocation": [
+          "did:web:indras-net.example:agents:varuna-occasion-01J#key-1"
+        ],
+        "capabilityDelegation": []
+      },
+      "svid_ref": {
+        "spiffe_id": "spiffe://indras-net.example/ns/swarm/agent/varuna-occasion-01J",
+        "svid_type": "x509",
+        "ttl_seconds": 3600
+      },
+      "credentials": [
+        {
+          "@context": [
+            "https://www.w3.org/ns/credentials/v2"
+          ],
+          "id": "urn:uuid:6c1a0f7e-0c2d-4b9a-9f4e-0a1b2c3d4e5f",
+          "type": [
+            "VerifiableCredential",
+            "RoleCredential",
+            "CapabilityCredential"
+          ],
+          "issuer": {
+            "id": "did:web:indras-net.governance",
+            "name": "Indra's Net governance root"
+          },
+          "validFrom": "2026-06-23T09:00:00Z",
+          "validUntil": "2026-09-23T09:00:00Z",
+          "credentialSubject": {
+            "id": "did:web:indras-net.example:agents:varuna-occasion-01J",
+            "role": "varuna",
+            "guild": "knowledge-research",
+            "capability_grants": [
+              {
+                "effect_id": "effect:net.fetch.read",
+                "granted_risk_class": "B",
+                "granted_by_did": "did:web:indras-net.governance",
+                "names_constraint_relaxed": "egress_allowlist:research-domains-only",
+                "falsifier": "domain NOT in egress_allowlist"
+              },
+              {
+                "effect_id": "effect:fs.write.workspace",
+                "granted_risk_class": "A",
+                "granted_by_did": "did:web:indras-net.governance",
+                "names_constraint_relaxed": "write_scope:own-workspace-cid-prefix"
+              }
+            ],
+            "risk_class_ceiling": "B",
+            "c1": 1.7,
+            "c2": 1.3,
+            "diversity_profile": {
+              "model_family": "family-A",
+              "model_family_floor": 0.5,
+              "is_explorer": true,
+              "is_enforcer": false
+            },
+            "accountable_human": "human:gov-steward-07",
+            "escalation_did": "did:web:indras-net.governance:escalation",
+            "output_schema_ref": "bafyreyworkeroutputenvelopeschemacid000000000000000000000"
+          },
+          "credentialStatus": {
+            "id": "https://indras-net.example/status/revocation/3#1487",
+            "type": "BitstringStatusListEntry",
+            "statusPurpose": "revocation",
+            "statusListIndex": "1487",
+            "statusListCredential": "https://indras-net.example/status/revocation/3"
+          },
+          "proof": {
+            "type": "DataIntegrityProof",
+            "cryptosuite": "eddsa-jcs-2022",
+            "created": "2026-06-23T09:00:01Z",
+            "verificationMethod": "did:web:indras-net.governance#key-root-1",
+            "proofPurpose": "assertionMethod",
+            "proofValue": "z3FXmExampleDetachedGovernanceSignatureOverJcsBytes00000000"
+          }
+        }
+      ],
+      "proof": {
+        "alg": "EdDSA",
+        "kid": "spiffe://indras-net.example/ns/swarm/agent/varuna-occasion-01J#svid",
+        "format": "JWS",
+        "signature": "eyJhbGciOiJFZERTQSJ9..detachedBundleSignatureOverJcsBytes.."
+      }
+    }
+  ]
+}

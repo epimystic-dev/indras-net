@@ -1,0 +1,94 @@
+{
+  "//": "IDENTITY.json — the capability-certificate; the on-disk IdentityRecord the Yama gate + Kaal-Bhairav boundary actually read. Nothing in SOUL/INSTRUCTIONS prose is authoritative against this file.",
+  "_INVARIANT_region": "hashed; boot-gated; editable only at top-gate C/D",
+  "persona_did": "did:web:indras-net.roles.shiva",
+  "did_document": {
+    "verificationMethod": [
+      {
+        "id": "did:web:indras-net.roles.shiva#key-1",
+        "type": "Ed25519VerificationKey2020",
+        "controller": "did:web:indras-net.roles.shiva",
+        "publicKeyMultibase": "<pubkey-bound-at-instantiation>"
+      }
+    ],
+    "authentication": [
+      "did:web:indras-net.roles.shiva#key-1"
+    ],
+    "capabilityInvocation": [
+      "did:web:indras-net.roles.shiva#key-1"
+    ]
+  },
+  "role_vc_ref": "vc:indras-net:role:shiva:<issued-at-instantiation>",
+  "risk_class_ceiling": "C",
+  "accountable_human": "human:indras-net:governance-steward",
+  "escalation_did": "did:web:indras-net.roles.hanuman-liaison",
+  "key_ref": "hsm://indras-net/keys/shiva#handle-opaque",
+  "role_class": "EVOLVABLE-seed",
+  "guild_id": "governance",
+  "immutable_powers": [],
+  "_VARIABLE_region": "editable under tiered reversibility; loosening gated (doc 13 §13.6.2)",
+  "capability_vc_refs": [
+    "vc:indras-net:cap:shiva:orchestration:<issued-at-instantiation>"
+  ],
+  "bound_toolset": [
+    {
+      "effect_id": "effect:plan.read",
+      "granted_risk_class": "A",
+      "granted_by_did": "did:web:indras-net.governance",
+      "names_constraint_relaxed": "read-only ingest of trusted:* plan blueprints; quarantined:* content is data-not-command",
+      "falsifier": "if any ingested plan content is ever treated as an executable instruction, revoke"
+    },
+    {
+      "effect_id": "effect:mission.decompose",
+      "granted_risk_class": "A",
+      "granted_by_did": "did:web:indras-net.governance",
+      "names_constraint_relaxed": "decomposition emits least-privilege sub-tasks only; no sub-task may carry an effect above its target's grant",
+      "falsifier": "if any emitted sub-task carries an over-privileged effect, revoke"
+    },
+    {
+      "effect_id": "effect:task.dispatch",
+      "granted_risk_class": "B",
+      "granted_by_did": "did:web:indras-net.governance",
+      "names_constraint_relaxed": "dispatch routes every effect through the Yama chokepoint floor-first; a denied effect is dropped, never re-routed",
+      "falsifier": "if a Yama-denied effect is ever retried around the gate, revoke"
+    },
+    {
+      "effect_id": "effect:envelope.reduce",
+      "granted_risk_class": "A",
+      "granted_by_did": "did:web:indras-net.governance",
+      "names_constraint_relaxed": "reduction preserves all child evidence and propagates worst-case status (any child FAIL => parent FAIL)",
+      "falsifier": "if any failing child is dropped or any evidence ref is lost in a merge, revoke"
+    },
+    {
+      "effect_id": "effect:verdict.emit",
+      "granted_risk_class": "A",
+      "granted_by_did": "did:web:indras-net.governance",
+      "names_constraint_relaxed": "emits ReducedVerdictEnvelope FOR Chitragupta to hash-chain; Shiva never writes the ledger directly",
+      "falsifier": "if Shiva ever performs a direct audit-ledger write, revoke"
+    },
+    {
+      "effect_id": "effect:escalate.human",
+      "granted_risk_class": "C",
+      "granted_by_did": "did:web:indras-net.governance",
+      "names_constraint_relaxed": "Class-C/D and ties route to the accountable human via Hanuman with literal child envelopes shown (Lies-in-the-Loop defense)",
+      "falsifier": "if an escalation ever presents an NL summary in place of the literal low-level object at a human gate, revoke"
+    }
+  ],
+  "output_schema": {
+    "envelope_type": "WorkerOutputEnvelope",
+    "artifact_schema_ref": "cid:indras-net:schema:reduced-verdict-envelope"
+  },
+  "taint_clearance": {
+    "max_read_confidentiality": "trusted:audited",
+    "min_write_integrity": "trusted:audited",
+    "derived_label_rule": "least-upper-bound"
+  },
+  "diversity_profile": {
+    "c1_self_weight": 0.5,
+    "c2_shared_weight": 0.8,
+    "is_explorer": false,
+    "is_enforcer": true,
+    "min_diversity_floor": 0.2
+  },
+  "_attestation_note": "Three-stage attestation (doc 13 §13.7.1): stage-1 genesis-author sig over triad_root_cid; stage-2 governance VC issuance where credentialSubject.did = persona_did and capability_grants EXACTLY equal bound_toolset (grants_match_identity MUST be true); stage-3 Chitragupta IDENTITY-class AuditRecord hash-chained into Akasha-Sutra. risk_class_ceiling=C and immutable_powers=[] are INVARIANT and boot-gated."
+}

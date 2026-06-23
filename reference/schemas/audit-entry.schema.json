@@ -1,0 +1,541 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:epimystic:indras-net:schema:audit-entry:1.1.0",
+  "title": "Indra's Net — Audit-Entry Bundle (tlog-tiles leaf + signed-note checkpoint)",
+  "description": "Wire contract (4) of six. The on-the-wire realization of doc-04 §4.2 Akasha-Sutra AuditRecord / Checkpoint over the C2SP tlog-tiles / Static-CT leaf-and-checkpoint format, with C2SP signed-note checkpoints and an OPTIONAL external-anchor mirror modeled on a Sigstore-Rekor-class public transparency log. An audit-entry-bundle is the unit a CONSUMER verifies: one append-only LEAF (canonicalized doc-04 AuditRecord, content-addressed by entry_hash and chained by prev_hash) bound to ONE signed-note CHECKPOINT that commits a tree of size tree_size to root_hash, plus the inclusion/consistency proof material and witness/external-anchor cosignatures the consumer reconstructs locally from static tiles. ASSURANCE-LAYER LABELS (every claim this schema supports is tagged with its layer and scope): the append-only / no-equivocation / non-omission properties this bundle is the OBJECT of are proved at L1 (design-time TLA+/Quint over the writer-handoff epoch-fence and the RFC-6962/tlog-tiles Merkle consistency relation; protocol mechanized in Tamarin/ProVerif) and enforced at L2 (the deterministic, non-LLM witness verifier and the Chitragupta exclusive-writer reference monitor); the conformance of any concrete instance to THIS schema is an L4 empirical check (validation + signature/CID re-verification). CAVEAT 1 (carried verbatim from doc-04 §4.1): a valid leaf signature, a green Merkle inclusion proof, and a cosigned checkpoint prove ORIGIN, INTEGRITY, and APPEND-ONLY POSITION — they NEVER prove the recorded event was correct, wise, floor-compatible, or safe. CAVEAT 2: JCS canonicalization (RFC 8785) makes the same logical AuditRecord hash-identical across producers; it cannot make the content honest. CAVEAT 3: shipping this schema makes the ledger BUILDABLE, not VALIDATED; no end-to-end evaluation of the composed loop exists. A dashboard built on this contract MUST label a passing inclusion proof as 'origin-valid, append-position-valid, content-unverified' — NEVER 'verified-safe'. HONESTY RED-LINES (binding on any system emitting these records): the residual named in the formal-assurance stream — a single forged-yet-internally-consistent append inside the detection window — is NOT formally excluded and MUST NOT be claimed as excluded; nothing here is, or implies, a claim that the swarm is verified safe/honest/aligned/conscious. The bundle proves a property of the CAGE (the harness), never of the ANIMAL (the model). All named standards (C2SP tlog-tiles, RFC 8785, RFC 6962, CIDv1/multiformats, signed-note, Sigstore/Rekor, JOSE/COSE) are open specifications cited in build context; no AI vendor or product is named. Open-ENGINE-yes / managed-SERVICE-no: the external-anchor mirror is specified against the OPEN tlog-tiles read API and the public-good Rekor witness ROLE, never a managed offering as a load-bearing dependency — see the self-hostable substitution path in the accompanying notes.",
+  "type": "object",
+  "$comment": "semver 1.1.0; registry-governed under backward-transitive compatibility. Canonicalize (RFC 8785 JCS) -> CIDv1 content-address -> detached JWS/COSE sign, per doc-21 §21.1 CAS discipline. Detached signatures ride BESIDE the canonical bytes and are therefore NOT covered by the bytes they sign; recompute entry_hash/root_hash over JCS bytes EXCLUDING all *_sig and witness/external-anchor cosignature fields.",
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "description": "Semver of THIS schema the producer validated against. Pinned to the CID-addressed schema version in the producing envelope's dataschema. Consumers fetch the exact version to re-validate.",
+      "examples": [
+        "1.1.0"
+      ]
+    },
+    "bundle_cid": {
+      "$ref": "#/$defs/cidv1",
+      "description": "CIDv1 over the JCS-canonicalized bytes of this whole bundle EXCLUDING detached signature/cosignature fields. The bundle's own self-verifying identity; a stale/truncated/BOM-corrupted read fails this CID before it can propagate (doc-04 §4.5 host-filesystem corruption detector)."
+    },
+    "leaf": {
+      "$ref": "#/$defs/auditLeaf",
+      "description": "The single append-only audit LEAF — the canonicalized doc-04 §4.2 AuditRecord plus its tlog-tiles position fields. This is the leaf whose H_leaf == entry_hash is committed under checkpoint.root_hash via inclusion_proof."
+    },
+    "checkpoint": {
+      "$ref": "#/$defs/checkpoint",
+      "description": "The C2SP signed-note CHECKPOINT (doc-04 §4.2 Checkpoint) the leaf is committed under: origin, tree_size, root_hash, and the witness/writer signatures over the note body."
+    },
+    "inclusion_proof": {
+      "$ref": "#/$defs/inclusionProof",
+      "description": "RFC-6962 / tlog-tiles inclusion proof: the O(log n) sibling hashes proving leaf at leaf_index is committed under checkpoint.root_hash at checkpoint.tree_size. Consumer recomputes locally from static tiles; the writer has no online proof service to equivocate (doc-04 §4.3)."
+    },
+    "consistency_proof": {
+      "$ref": "#/$defs/consistencyProof",
+      "description": "OPTIONAL. RFC-6962 / tlog-tiles consistency proof that the consumer's last-trusted (tree_size, root_hash) is a strict append-only PREFIX of this checkpoint. Present when the consumer is advancing a previously-trusted checkpoint; the no-equivocation / append-only property (L1-proved) is checked here at L4."
+    },
+    "external_anchor": {
+      "$ref": "#/$defs/externalAnchor",
+      "description": "OPTIONAL but MANDATORY for governance/constitutional checkpoints (doc-04 §4.4.2): a mirror of this leaf/checkpoint into an INDEPENDENT public transparency log outside the swarm's own blast radius (a Sigstore-Rekor-class witness role). Defeats split-view across the operator boundary even under total internal compromise. Open-spec / public-good ROLE, not a managed-service dependency."
+    }
+  },
+  "required": [
+    "schema_version",
+    "bundle_cid",
+    "leaf",
+    "checkpoint",
+    "inclusion_proof"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "cidv1": {
+      "type": "string",
+      "pattern": "^b[a-z2-7]{20,}$",
+      "description": "CIDv1, base32-lower multibase (leading 'b'), wrapping multicodec + multihash(SHA-256) over JCS-canonicalized bytes (open multiformats spec). Location-independent, self-verifying, deduplicated. CID says WHAT the bytes are, NEVER who produced them — attribution always rides separately via signer_did (doc-04 §4.5 invariant).",
+      "examples": [
+        "bafkreigh2akiscaildc4wx6n3l3j2b6k5r5q3vqf2y6h7m4n5p6q7r8s9t"
+      ]
+    },
+    "did": {
+      "type": "string",
+      "pattern": "^did:(web|key):[A-Za-z0-9._%:#/-]+$",
+      "description": "W3C DID of a principal (did:web for standing personas + governance root, did:key for ephemeral occasions). Vendor-neutral identifier; resolves to a DID Document of verification keys per the identity-bundle contract.",
+      "examples": [
+        "did:web:indras-net.roles:chitragupta",
+        "did:web:indras-net.roles:yama"
+      ]
+    },
+    "ulid": {
+      "type": "string",
+      "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$",
+      "description": "ULID — monotonic, lexicographically time-sortable record identifier (doc-04 §4.2 record_id discipline). Single-writer-at-a-time invariant (doc-04 §4.11): ULID monotonicity is preserved across the witnessed writer-handoff epoch-fence (L1-proved, TLA+/TLAPS).",
+      "examples": [
+        "01J9Z6K8QF7B3N0WV2T5XR9C4D"
+      ]
+    },
+    "sha256hex": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "Lower-hex SHA-256 (32 bytes). RFC-6962 domain-separated where it is a Merkle node/leaf hash: H_leaf = SHA-256(0x00 || JCS_leaf_bytes), H_node = SHA-256(0x01 || left || right). The 0x00/0x01 prefixes block second-preimage attacks."
+    },
+    "rfc3339": {
+      "type": "string",
+      "format": "date-time",
+      "description": "RFC 3339 / ISO-8601 UTC timestamp. Advisory wall-clock only; CAUSAL ordering is established by prev_hash + leaf_index + the Merkle tree, never by this field. Timing fields are also a steganalysis surface (doc-04 §4.9) — anomalous inter-arrival distributions are a covert-channel signal, not benign.",
+      "examples": [
+        "2026-06-23T09:41:07.512Z"
+      ]
+    },
+    "jwsDetached": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]+\\.\\.[A-Za-z0-9_-]+$",
+      "description": "Detached JWS compact serialization (JOSE) — header..signature with an EMPTY payload segment; the signed bytes are the referenced canonical bytes carried beside the signature, never embedded inside it (doc-21 §21.1). Produced by the TEE/HSM signer module, which RE-CHECKS capability membership before signing (doc-04 §4.6) so a prompt-injected model cannot sign out-of-role. COSE_Sign1 is the accepted CBOR-native equivalent.",
+      "examples": [
+        "eyJhbGciOiJFZERTQSIsImtpZCI6ImNoaXRyYWd1cHRhI2tleS0xIn0..3hQ2pXr7sN0kL9mZ"
+      ]
+    },
+    "auditLeaf": {
+      "type": "object",
+      "description": "The append-only audit LEAF: doc-04 §4.2 AuditRecord fields + tlog-tiles position fields. Authored (signed) by the ACTING agent's DID; WRITTEN (appended) exclusively by Chitragupta — authorship and write-custody are cryptographically separate so a monitored agent has no capability path to forge audit (doc-04 §4.2).",
+      "properties": {
+        "leaf_index": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Zero-based position of this leaf in the tlog-tiles Merkle log. Append-only and immutable once published; combined with tree_size it selects the O(log n) sibling path in inclusion_proof. Monotone with record_id within an epoch."
+        },
+        "record_id": {
+          "$ref": "#/$defs/ulid",
+          "description": "doc-04 §4.2 record_id. Monotonic, time-sortable; single-writer-at-a-time. Stable application-level identity of the event independent of leaf_index re-basing across epoch seals."
+        },
+        "triad_root_cid": {
+          "$ref": "#/$defs/cidv1",
+          "description": "CIDv1 binding this leaf to the actor's identity-triad root (DID Document + role VC + capability VC state) in force at append time. Lets a consumer re-resolve exactly which capability state authorized this action_class — the identity-bundle cross-reference."
+        },
+        "prev_hash": {
+          "$ref": "#/$defs/sha256hex",
+          "description": "doc-04 §4.2 prev_hash: SHA-256 of the immediately-preceding leaf's entry_hash. The PARALLEL O(1) per-record hash chain that gives cheap local tamper detection in addition to the Merkle tree — any altered past entry breaks every downstream prev_hash. The genesis leaf uses the all-zero hash."
+        },
+        "entry_hash": {
+          "$ref": "#/$defs/sha256hex",
+          "description": "This leaf's RFC-6962 leaf hash: SHA-256(0x00 || JCS-canonical bytes of this leaf with entry_hash and sig EXCLUDED). This is the value committed under checkpoint.root_hash via inclusion_proof, and the value the NEXT leaf references as its prev_hash. Recompute-and-compare on read = the doc-04 §4.5 corruption detector."
+        },
+        "envelope_cid": {
+          "$ref": "#/$defs/cidv1",
+          "description": "CIDv1 of the worker-output-envelope (wire contract 1) this audit event records — the OutputEnvelope/ActionEnvelope/BlackboardDelta the event is about. Binds the audit trail to the exact bytes the actor emitted; the envelope carries its own honesty/provenance block."
+        },
+        "signer_did": {
+          "$ref": "#/$defs/did",
+          "description": "doc-04 §4.2 actor_did: the DID of the agent that AUTHORED the event and signed this leaf (NOT Chitragupta, the writer). A forged action_class from a DID whose CapabilityVC does not authorize it is REJECTED at append by the authority/writer fence (doc-04 Protocol A step 3)."
+        },
+        "signer_role": {
+          "type": "string",
+          "description": "doc-04 §4.2 actor_role: human-readable role label of the signer, e.g. 'Yama/policy', 'Vishnu/continuity', 'Chitragupta/audit'. Advisory; the authoritative authorization is the CapabilityVC referenced via triad_root_cid, not this string.",
+          "examples": [
+            "Yama/policy"
+          ]
+        },
+        "action_class": {
+          "type": "string",
+          "enum": [
+            "OBSERVE",
+            "PROPOSE",
+            "ENFORCE_PASS",
+            "ENFORCE_FAIL",
+            "HALT",
+            "REPARATIVE"
+          ],
+          "description": "doc-04 §4.2 action_class (closed enum). Only Yama's VC authorizes ENFORCE_PASS/ENFORCE_FAIL; only Vishnu's authorizes HALT; checked deterministically at append. A REPARATIVE record is a corrective act appended after a preserved violation (correction ledger, not punishment). Retention is selective by this class (doc-04 §4.10): ENFORCE_FAIL/HALT/REPARATIVE are kept at full fidelity indefinitely. This enum lists ONLY the classes the reference implementation actually writes; subsystem-scoped classes (consensus/reputation/evolution/identity-events) are intentionally not present until those subsystems exist and will extend this enum behind a schema-version bump."
+        },
+        "event_type": {
+          "type": "string",
+          "description": "doc-04 §4.2 event_type: fine-grained verb within action_class, e.g. 'policy.gate.deny', 'writer.handoff', 'consensus.tier1.escalate'. Open string; the closed authority enum is action_class.",
+          "examples": [
+            "policy.gate.deny"
+          ]
+        },
+        "subject_cid": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/cidv1"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "doc-04 §4.2 subject_cid: the content-addressed artifact this event is ABOUT (may equal or differ from envelope_cid), or null for events with no artifact subject."
+        },
+        "payload_commitment": {
+          "$ref": "#/$defs/sha256hex",
+          "description": "doc-04 §4.2 payload_commitment: salted hash H(salt || canonical_payload) of the off-log bulk payload. Enables selective disclosure (later reveal (salt, payload) to a third party who recomputes and matches) WITHOUT putting the payload in the public log (doc-04 §4.5)."
+        },
+        "reasoning_rung": {
+          "oneOf": [
+            {
+              "type": "string",
+              "enum": [
+                "rung1",
+                "rung2",
+                "rung3"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "doc-04 §4.2.1 honesty-floor field (Pearl causal ladder: rung1 associative / rung2 interventional / rung3 counterfactual). SELF-REPORTED by the acting agent. A rung-1 pattern tagged rung-3 is the central AI failure mode; this field makes a maker-checker contradiction a PROVABLE ledger inconsistency, but discovery still requires an independent checker to exist and look (doc-04 §4.2.1 honest limitation). null when not applicable."
+        },
+        "iterated": {
+          "type": "boolean",
+          "description": "doc-04 §4.2.1 honesty-floor field: did an independent maker-checker pass ACTUALLY run? A falsely-claimed iterated=true is a direct honesty-floor violation; for ENFORCE_FAIL and irreversible Class-C/D records a paired independent-checker leaf (refs -> this record_id) is MANDATORY before the record is treated as settled."
+        },
+        "refs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ulid"
+          },
+          "description": "doc-04 §4.2 refs: causal back-references to other record_ids (e.g. checker -> maker, consensus-outcome -> its votes, reconciliation-violation -> the route-around finding). The ref-graph is itself a steganalysis surface (doc-04 §4.9); anomalous ref structure is a covert-channel signal.",
+          "examples": [
+            [
+              "01J9Z6K2AB0000000000000000"
+            ]
+          ]
+        },
+        "policy_version": {
+          "type": "string",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$",
+          "description": "doc-04 §4.2 policy_version: semver of the Yama PolicyBundle in force when this event was decided. Policy version-changes are themselves append-only ledger records; loosening requires a named falsifier + governance gate (doc-04 §4.13).",
+          "examples": [
+            "3.2.0"
+          ]
+        },
+        "sig": {
+          "$ref": "#/$defs/jwsDetached",
+          "description": "doc-04 §4.2 sig: the ACTOR's detached JWS/COSE signature over the JCS-canonical bytes of this leaf (with entry_hash and sig EXCLUDED), produced via the TEE/HSM signer. CAVEAT 1: proves origin+integrity of the leaf ONLY; never that the recorded decision was correct, floor-compatible, or safe."
+        }
+      },
+      "required": [
+        "leaf_index",
+        "record_id",
+        "prev_hash",
+        "entry_hash",
+        "envelope_cid",
+        "signer_did",
+        "action_class",
+        "payload_commitment",
+        "policy_version",
+        "sig"
+      ],
+      "additionalProperties": false
+    },
+    "checkpoint": {
+      "type": "object",
+      "description": "doc-04 §4.2 Checkpoint as a C2SP signed-note. The signed-note BODY (the bytes the signatures cover) is the canonical text 'origin\\n tree_size\\n base64(root_hash)\\n'; witness and writer signatures are note-signature lines over that body. Threshold t-of-w cosigning (incl. >=1 external anchor where required) MUST verify before any consumer trusts this checkpoint (doc-04 §4.4).",
+      "properties": {
+        "origin": {
+          "type": "string",
+          "description": "C2SP signed-note ORIGIN line — the unique, stable identifier of THIS log instance (the schema-of-record namespace + log id). A consumer pins acceptance to a known origin; a checkpoint from an unexpected origin is rejected. Vendor-neutral, operator-chosen.",
+          "examples": [
+            "indras-net.akasha-sutra/chitragupta-ledger/v1"
+          ]
+        },
+        "tree_size": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "doc-04 §4.2 Checkpoint.tree_size: number of leaves committed by root_hash. Append-only and monotone non-decreasing across successive checkpoints; the consistency_proof witnesses that growth is prefix-preserving (the L1-proved no-rewrite/no-reorder property checked at L4)."
+        },
+        "root_hash": {
+          "$ref": "#/$defs/sha256hex",
+          "description": "doc-04 §4.2 Checkpoint.root_hash: the RFC-6962 Merkle Tree Hash over all tree_size leaves. The single value inclusion_proof verifies the leaf against. base64 of these 32 bytes is the third line of the signed-note body."
+        },
+        "timestamp": {
+          "$ref": "#/$defs/rfc3339",
+          "description": "Advisory checkpoint issuance time. Ordering authority is (tree_size, root_hash) + the seal chain, never this field."
+        },
+        "prev_checkpoint_hash": {
+          "$ref": "#/$defs/sha256hex",
+          "description": "doc-04 §4.2 Checkpoint.prev_checkpoint_hash: SHA-256 of the immediately-preceding checkpoint's signed-note body. Chains checkpoints so the sequence of published roots is itself tamper-evident; on an epoch seal this links into the SealCheckpointRecord seal chain (doc-04 §4.10)."
+        },
+        "witness_cosigs": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/witnessSig"
+          },
+          "description": "doc-04 §4.2 witness_cosigs: the t-of-w threshold of deterministic non-LLM Witness cosignatures over the signed-note body (doc-04 §4.4.1). Each witness co-signs ONLY after verifying this checkpoint is a valid append-only consistency extension of the last checkpoint IT signed; two conflicting checkpoints at the same tree_size make a witness REFUSE and raise a ForkAlarm (HALT-class -> Vishnu). Heterogeneity is enforced at the root-of-trust level (doc-04 §4.6)."
+        },
+        "writer_sig": {
+          "$ref": "#/$defs/jwsDetached",
+          "description": "doc-04 §4.2 chitragupta_sig: the exclusive writer's detached signature over the signed-note body, produced by the TEE/HSM signer bound to the audit.checkpoint capability. RESIDUAL (doc-04 §4.6, stated, not eliminated): the writer's own key is a single TEE dependency; witnesses catch a FORK but not a single forged-yet-internally-consistent append before detection — this MUST NOT be claimed as excluded."
+        }
+      },
+      "required": [
+        "origin",
+        "tree_size",
+        "root_hash",
+        "witness_cosigs",
+        "writer_sig"
+      ],
+      "additionalProperties": false
+    },
+    "witnessSig": {
+      "type": "object",
+      "description": "doc-04 §4.4 WitnessSig: one Witness's cosignature plus the trust-domain / root-of-trust binding that makes the quorum fail INDEPENDENTLY. A consumer applies its OWN acceptance policy over which witnesses count (client-chosen consensus), so a captured internal majority still fails a consumer that requires the external anchor.",
+      "properties": {
+        "witness_did": {
+          "$ref": "#/$defs/did",
+          "description": "DID of the cosigning witness. Witness-set membership changes are themselves governed records under a governance gate (doc-04 §4.4.2) — the set cannot be silently packed."
+        },
+        "trust_domain_id": {
+          "type": "string",
+          "description": "Identifier of the distinct trust domain (separate process / keys / storage) this witness is pinned to. No single host compromise forges a quorum.",
+          "examples": [
+            "domain.internal.a"
+          ]
+        },
+        "root_of_trust_id": {
+          "type": "string",
+          "description": "doc-04 §4.6 BINDING heterogeneity field: the root-of-trust (HSM/TEE vendor or software-keystore attestation root) this witness keys under. At least one internal witness MUST root in a DIFFERENT root-of-trust, and an external-anchor witness in a DIFFERENT trust domain entirely, so one attestation-root compromise cannot forge both the writer signature AND a same-vendor witness quorum.",
+          "examples": [
+            "rot.keystore.software-x"
+          ]
+        },
+        "checkpoint_body_hash": {
+          "$ref": "#/$defs/sha256hex",
+          "description": "SHA-256 of the exact signed-note body this witness cosigned. Lets a consumer confirm all cosigs are over the identical body (no per-witness body substitution)."
+        },
+        "sig": {
+          "$ref": "#/$defs/jwsDetached",
+          "description": "The witness's detached signature over the signed-note body. Deterministic non-LLM verifier output (doc-04 §4.4.1): a few hundred lines, no model in the loop, so the witness itself is not a hallucination surface."
+        },
+        "observed_at": {
+          "$ref": "#/$defs/rfc3339",
+          "description": "When this witness observed and cosigned the checkpoint. Advisory."
+        }
+      },
+      "required": [
+        "witness_did",
+        "root_of_trust_id",
+        "checkpoint_body_hash",
+        "sig"
+      ],
+      "additionalProperties": false
+    },
+    "inclusionProof": {
+      "type": "object",
+      "description": "RFC-6962 / tlog-tiles inclusion proof. The consumer recomputes the leaf-to-root path LOCALLY from static, CID-addressed tiles (doc-04 §4.3) — there is no server-side proof service to serve a tailored/false proof per client. A miss is a LOUD failure (doc-04 §4.5 CID-mismatch-on-read), never a silent propagation.",
+      "properties": {
+        "leaf_index": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Index of the leaf being proved; MUST equal leaf.leaf_index."
+        },
+        "tree_size": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Tree size at which inclusion is proved; MUST equal checkpoint.tree_size. The (leaf_index, tree_size) pair fixes the exact sibling path."
+        },
+        "audit_path": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/sha256hex"
+          },
+          "description": "The O(log n) ordered sibling hashes from leaf to root. Verification: fold leaf.entry_hash up this path with RFC-6962 node hashing (0x01 prefix) and assert the result == checkpoint.root_hash. An empty array is valid only for a single-leaf tree (tree_size==1).",
+          "examples": [
+            [
+              "a1b2c3d4e5f60718293a4b5c6d7e8f90112233445566778899aabbccddeeff00",
+              "00ffeeddccbbaa998877665544332211009f8e7d6c5b4a39281706f5e4d3c2b1"
+            ]
+          ]
+        },
+        "tile_refs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/cidv1"
+          },
+          "description": "OPTIONAL CIDv1s of the static tlog-tiles (path tile/{level}/{index}, 256 entries/tile per the transparency.dev convention) the consumer fetched to reconstruct audit_path. Each tile is self-verifying by its CID; lets a consumer cache and re-verify offline. Advisory provenance for the proof, not part of the cryptographic check."
+        }
+      },
+      "required": [
+        "leaf_index",
+        "tree_size",
+        "audit_path"
+      ],
+      "additionalProperties": false
+    },
+    "consistencyProof": {
+      "type": "object",
+      "description": "RFC-6962 / tlog-tiles consistency proof that a size-m root is a strict append-only PREFIX of the size-n (= checkpoint.tree_size) root. This is the L4 check of the L1-proved append-only / no-reorder invariant: a 'skeptical client' carrying only its last trusted (tree_size, root_hash) verifies forward without trusting the writer.",
+      "properties": {
+        "first_size": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "The earlier tree_size m the consumer already trusts (its last-trusted checkpoint)."
+        },
+        "first_root_hash": {
+          "$ref": "#/$defs/sha256hex",
+          "description": "The earlier root_hash at first_size the consumer already trusts. Consistency verification reconstructs THIS from the proof; a mismatch means the log was rewritten/forked and is a HALT-class ForkAlarm condition."
+        },
+        "second_size": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "The later tree_size n; MUST equal checkpoint.tree_size."
+        },
+        "proof_path": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/sha256hex"
+          },
+          "description": "The O(log n) hashes proving the size-m root is a prefix of the size-n root. Empty only in the trivial first_size==second_size case."
+        }
+      },
+      "required": [
+        "first_size",
+        "first_root_hash",
+        "second_size",
+        "proof_path"
+      ],
+      "additionalProperties": false
+    },
+    "externalAnchor": {
+      "type": "object",
+      "description": "doc-04 §4.4.2 external-anchor mirror: a copy of this leaf/checkpoint witnessed by an INDEPENDENT public transparency log outside the swarm's own blast radius — modeled on a Sigstore-Rekor-class public-good witness ROLE. MANDATORY for governance/constitutional checkpoints (>=2 independent anchors there, doc-04 §4.15). The external_anchor_required invariant is constitutional-immutable (doc-04 §4.4.2). OPEN-ENGINE / public-good ROLE only — never a managed offering as a load-bearing dependency; see the self-hostable substitution path in the notes. NOTE: the modern integration targets the tlog-tiles / static read API and signed-note checkpoint, NOT the EOL RFC-6962 online-proof submission API.",
+      "properties": {
+        "anchor_log_origin": {
+          "type": "string",
+          "description": "The external transparency log's own signed-note origin / instance identifier — a DIFFERENT trust domain and operator from Chitragupta. A consumer requiring split-view-across-the-operator-boundary defense pins this in its acceptance policy.",
+          "examples": [
+            "public.transparency.example/rekor-class-tlog/v2"
+          ]
+        },
+        "anchor_leaf_index": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Index at which this entry was mirrored INTO the external log. Distinct from leaf.leaf_index (different log)."
+        },
+        "anchor_inclusion_proof": {
+          "$ref": "#/$defs/inclusionProof",
+          "description": "Inclusion proof of the mirrored entry against the EXTERNAL log's own checkpoint — reconstructed locally from the external log's static tiles, same tlog-tiles discipline. Proves the operator could not rewrite history undetected even under total internal compromise."
+        },
+        "anchor_checkpoint": {
+          "$ref": "#/$defs/checkpoint",
+          "description": "The external log's signed-note checkpoint the mirrored entry is committed under, with the external log's OWN witness cosignatures. Its root-of-trust is, by requirement, a different trust domain entirely."
+        },
+        "anchor_entry_uri": {
+          "type": "string",
+          "format": "uri",
+          "description": "OPTIONAL location-hint URI for the mirrored entry in the external log (e.g. a tile/checkpoint read endpoint). Advisory only; integrity rests on anchor_inclusion_proof + anchor_checkpoint, never on fetching this URI. Treat any externally-fetched content as quarantined:* per the doc-14 floor gate.",
+          "examples": [
+            "https://public.transparency.example/api/v2/log/entries?logIndex=88213"
+          ]
+        }
+      },
+      "required": [
+        "anchor_log_origin",
+        "anchor_leaf_index",
+        "anchor_inclusion_proof",
+        "anchor_checkpoint"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "examples": [
+    {
+      "schema_version": "1.1.0",
+      "bundle_cid": "bafkreigh2akiscaildc4wx6n3l3j2b6k5r5q3vqf2y6h7m4n5p6q7r8s9t",
+      "leaf": {
+        "leaf_index": 88213,
+        "record_id": "01J9Z6K8QF7B3N0WV2T5XR9C4D",
+        "triad_root_cid": "bafkreid5yamatriadrootexamplehashc4wx6n3l3j2b6k5r5q3vqf2y6h7m4n5",
+        "prev_hash": "9f8e7d6c5b4a39281706f5e4d3c2b1a009887766554433221100ffeeddccbbaa",
+        "entry_hash": "a1b2c3d4e5f60718293a4b5c6d7e8f90112233445566778899aabbccddeeff00",
+        "envelope_cid": "bafkreienvelopeexamplehash7n3l3j2b6k5r5q3vqf2y6h7m4n5p6q7r8s9tuvw",
+        "signer_did": "did:web:indras-net.roles:yama",
+        "signer_role": "Yama/policy",
+        "action_class": "ENFORCE_FAIL",
+        "event_type": "policy.gate.deny",
+        "subject_cid": "bafkreisubjectexamplehashj2b6k5r5q3vqf2y6h7m4n5p6q7r8s9tuvwx1y2z3",
+        "payload_commitment": "00ffeeddccbbaa998877665544332211009f8e7d6c5b4a39281706f5e4d3c2b1",
+        "reasoning_rung": "rung2",
+        "iterated": true,
+        "refs": [
+          "01J9Z6K2AB0000000000000000"
+        ],
+        "policy_version": "3.2.0",
+        "sig": "eyJhbGciOiJFZERTQSIsImtpZCI6InlhbWEja2V5LTEifQ..Qm9nVXNTaWdGb3JFeGFtcGxlT25seQ"
+      },
+      "checkpoint": {
+        "origin": "indras-net.akasha-sutra/chitragupta-ledger/v1",
+        "tree_size": 88214,
+        "root_hash": "112233445566778899aabbccddeeff00a1b2c3d4e5f60718293a4b5c6d7e8f90",
+        "timestamp": "2026-06-23T09:41:07.512Z",
+        "prev_checkpoint_hash": "778899aabbccddeeff00112233445566a1b2c3d4e5f60718293a4b5c6d7e8f90",
+        "witness_cosigs": [
+          {
+            "witness_did": "did:web:indras-net.witness:internal-a",
+            "trust_domain_id": "domain.internal.a",
+            "root_of_trust_id": "rot.hsm.vendor-x",
+            "checkpoint_body_hash": "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
+            "sig": "eyJhbGciOiJFZERTQSIsImtpZCI6Indhcy1hI2tleS0xIn0..V2l0bmVzc0FTaWdFeGFtcGxl",
+            "observed_at": "2026-06-23T09:41:07.900Z"
+          },
+          {
+            "witness_did": "did:web:indras-net.witness:internal-b",
+            "trust_domain_id": "domain.internal.b",
+            "root_of_trust_id": "rot.keystore.software-y",
+            "checkpoint_body_hash": "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
+            "sig": "eyJhbGciOiJFZERTQSIsImtpZCI6Indhcy1iI2tleS0xIn0..V2l0bmVzc0JTaWdFeGFtcGxl",
+            "observed_at": "2026-06-23T09:41:08.110Z"
+          }
+        ],
+        "writer_sig": "eyJhbGciOiJFZERTQSIsImtpZCI6ImNoaXRyYWd1cHRhI2tleS0xIn0..Q2hlY2twb2ludFNpZ0V4YW1wbGU"
+      },
+      "inclusion_proof": {
+        "leaf_index": 88213,
+        "tree_size": 88214,
+        "audit_path": [
+          "00ffeeddccbbaa998877665544332211009f8e7d6c5b4a39281706f5e4d3c2b1",
+          "778899aabbccddeeff00112233445566a1b2c3d4e5f60718293a4b5c6d7e8f90"
+        ],
+        "tile_refs": [
+          "bafkreitileexample0level0index344q3vqf2y6h7m4n5p6q7r8s9tuvwx1y2z3a"
+        ]
+      },
+      "consistency_proof": {
+        "first_size": 88000,
+        "first_root_hash": "5566778899aabbccddeeff00112233444e5f60718293a4b5c6d7e8f90a1b2c3d4",
+        "second_size": 88214,
+        "proof_path": [
+          "aabbccddeeff00112233445566778899c3d4e5f60718293a4b5c6d7e8f90a1b2",
+          "ddeeff00112233445566778899aabbcce5f60718293a4b5c6d7e8f90a1b2c3d4"
+        ]
+      },
+      "external_anchor": {
+        "anchor_log_origin": "public.transparency.example/rekor-class-tlog/v2",
+        "anchor_leaf_index": 5512098,
+        "anchor_inclusion_proof": {
+          "leaf_index": 5512098,
+          "tree_size": 5512099,
+          "audit_path": [
+            "f00112233445566778899aabbccddeef0718293a4b5c6d7e8f90a1b2c3d4e5f6"
+          ]
+        },
+        "anchor_checkpoint": {
+          "origin": "public.transparency.example/rekor-class-tlog/v2",
+          "tree_size": 5512099,
+          "root_hash": "445566778899aabbccddeeff001122330718293a4b5c6d7e8f90a1b2c3d4e5f6",
+          "witness_cosigs": [
+            {
+              "witness_did": "did:web:public-good.witness:armory",
+              "trust_domain_id": "domain.external.public-good",
+              "root_of_trust_id": "rot.external.independent-operator",
+              "checkpoint_body_hash": "9988776655443322110099aabbccddeeff00112233445566778899aabbccddee",
+              "sig": "eyJhbGciOiJFZERTQSIsImtpZCI6ImFybW9yeSNrZXktMSJ9..RXh0QW5jaG9yU2lnRXhhbXBsZQ"
+            }
+          ],
+          "writer_sig": "eyJhbGciOiJFZERTQSIsImtpZCI6InRsb2cja2V5LTEifQ..RXh0V3JpdGVyU2lnRXhhbXBsZQ"
+        },
+        "anchor_entry_uri": "https://public.transparency.example/api/v2/log/entries?logIndex=5512098"
+      }
+    }
+  ]
+}

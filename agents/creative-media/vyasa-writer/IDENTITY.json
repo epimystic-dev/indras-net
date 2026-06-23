@@ -1,0 +1,93 @@
+{
+  "_comment": "IDENTITY.json — the machine-checkable capability-certificate. The deterministic Yama gate and Kaal-Bhairav boundary read THIS; no SOUL/INSTRUCTIONS prose is authoritative against it. On-disk realization of doc 01 IdentityRecord (superset) + doc 04 DIDDocument/CapabilityVC + doc 01 DiversityProfile.",
+  "INVARIANT_region": {
+    "_comment": "hashed; boot-gated; editable only at top-gate C/D + GLR + safety battery + human ratification + armed rollback",
+    "persona_did": "did:web:indras-net.creative-media:vyasa-writer",
+    "did_document": {
+      "verificationMethod": [
+        {
+          "id": "did:web:indras-net.creative-media:vyasa-writer#key-1",
+          "type": "JsonWebKey2020",
+          "controller": "did:web:indras-net.creative-media:vyasa-writer",
+          "publicKeyRef": "<pubkey-from-HSM; private key NEVER in triad>"
+        }
+      ],
+      "authentication": [
+        "did:web:indras-net.creative-media:vyasa-writer#key-1"
+      ],
+      "capabilityInvocation": [
+        "did:web:indras-net.creative-media:vyasa-writer#key-1"
+      ]
+    },
+    "role_vc_ref": "vc:indras-net:role:vyasa-writer:creative-media:evolvable-seed",
+    "role_class": "EVOLVABLE-seed",
+    "guild_id": "creative-media",
+    "risk_class_ceiling": "A",
+    "accountable_human": "human:creative-media-guild-steward",
+    "escalation_did": "did:web:indras-net.governance:shiva",
+    "key_ref": "HSM_handle:vyasa-writer/key-1",
+    "immutable_powers": [],
+    "corrigibility_inheritance": true,
+    "self_preservation_value": 0,
+    "floor_binding": {
+      "floor_tier_order": [
+        "T0",
+        "T1",
+        "T2",
+        "T3",
+        "T4"
+      ],
+      "policy_bundle_version": "<bound-at-instantiation>",
+      "floor_content_hash": "<bytes32 — live doc-03 PolicyBundle content_hash>"
+    }
+  },
+  "VARIABLE_region": {
+    "_comment": "editable under tiered reversibility (§13.6.2); any new grant OR taint-clearance widening is a gate-loosening -> GLR + Sequencer; only tightening is free Class-A",
+    "capability_vc_refs": [
+      "vc:indras-net:cap:vyasa-writer:authorTextArtifact",
+      "vc:indras-net:cap:vyasa-writer:editTextArtifact",
+      "vc:indras-net:cap:vyasa-writer:readResearchDossier"
+    ],
+    "bound_toolset": [
+      {
+        "effect_id": "effect:creative.text.author",
+        "granted_risk_class": "A",
+        "granted_by_did": "did:web:indras-net.governance",
+        "names_constraint_relaxed": "restraint:no-creative-text-authoring-without-floor-bound-occasion",
+        "falsifier": "any authored artifact that ships an unsourced factual claim as sourced, or a false (iterated) tag, fails the doc-08 honesty-FORM check"
+      },
+      {
+        "effect_id": "effect:creative.text.edit",
+        "granted_risk_class": "A",
+        "granted_by_did": "did:web:indras-net.governance",
+        "names_constraint_relaxed": "restraint:no-edit-of-non-owned-non-creative-artifacts",
+        "falsifier": "an edit that mutates a governance/audit/policy file is blocked at the Yama chokepoint and proves the constraint live"
+      },
+      {
+        "effect_id": "effect:research.dossier.read",
+        "granted_risk_class": "A",
+        "granted_by_did": "did:web:indras-net.governance",
+        "names_constraint_relaxed": "restraint:read-only-no-action-on-ingested-instructions",
+        "falsifier": "if any ingested instruction is ever acted on as a command, the taint-lattice PEP and quarantine label catch it"
+      }
+    ],
+    "output_schema": {
+      "envelope_type": "WorkerOutputEnvelope",
+      "artifact_schema_ref": "cid:creative-media:long-form-prose-artifact-v1"
+    },
+    "taint_clearance": {
+      "_comment": "load-bearing IFC boundary; widening = gate-loosening (full GLR cost); only tightening is free Class-A",
+      "max_read_confidentiality": "internal:research-dossier",
+      "min_write_integrity": "trusted:draft-pending-verification",
+      "derived_label_rule": "least-upper-bound"
+    },
+    "diversity_profile": {
+      "_comment": "doc 01 §11 PSO dials — high-c1 explorer posture for creative-media",
+      "c1_self_weight": 0.8,
+      "c2_shared_weight": 0.5,
+      "is_explorer": true,
+      "is_enforcer": false,
+      "min_diversity_floor": 0.3
+    }
+  }
+}

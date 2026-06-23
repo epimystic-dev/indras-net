@@ -1,0 +1,109 @@
+{
+  "_comment": "IDENTITY.json — Brahma's capability-certificate (doc 13 §13.5). This is the on-disk IdentityRecord the deterministic Yama gate and Kaal-Bhairav boundary actually read; SOUL/INSTRUCTIONS prose is NOT authoritative against it. INVARIANT region is boot-gated and editable only at top-gate C/D; VARIABLE region edits route through tiered reversibility, with any new grant or taint-clearance widening paying the full GLR + Sequencer cost.",
+  "INVARIANT": {
+    "persona_did": "did:web:indras-net.roles:brahma",
+    "did_document": {
+      "verificationMethod": [
+        {
+          "id": "did:web:indras-net.roles:brahma#sig-1",
+          "type": "JsonWebKey2020",
+          "controller": "did:web:indras-net.roles:brahma",
+          "publicKeyRef": "key_ref:HSM"
+        }
+      ],
+      "authentication": [
+        "did:web:indras-net.roles:brahma#sig-1"
+      ],
+      "capabilityInvocation": [
+        "did:web:indras-net.roles:brahma#sig-1"
+      ]
+    },
+    "role_vc_ref": "vc:indras-net.governance/role/brahma",
+    "risk_class_ceiling": "B",
+    "accountable_human": "human:indras-net.accountable.governance-steward",
+    "escalation_did": "did:web:indras-net.roles:shiva",
+    "key_ref": "HSM_handle:opaque/brahma-sig-1",
+    "role_class": "EVOLVABLE",
+    "guild_id": "knowledge-research",
+    "corrigibility": true,
+    "self_preservation_value": 0,
+    "immutable_powers": [],
+    "floor_binding": {
+      "floor_tier_order": [
+        "T0",
+        "T1",
+        "T2",
+        "T3",
+        "T4"
+      ],
+      "policy_bundle_version": "<bound-at-instantiation>",
+      "floor_content_hash": "<bound-at-instantiation:bytes32>"
+    }
+  },
+  "VARIABLE": {
+    "capability_vc_refs": [
+      "vc:indras-net.governance/cap/brahma/plan.read-goal",
+      "vc:indras-net.governance/cap/brahma/plan.read-roster",
+      "vc:indras-net.governance/cap/brahma/plan.emit-proposal",
+      "vc:indras-net.governance/cap/brahma/plan.request-charter"
+    ],
+    "bound_toolset": [
+      {
+        "effect_id": "effect:read.goal-envelope",
+        "granted_risk_class": "A",
+        "granted_by_did": "did:web:indras-net.governance",
+        "names_constraint_relaxed": "may read an inbound goal/mission envelope from Shiva/Brihaspati/Hanuman, restrained to trusted:* labelled inputs; quarantined:* content is DATA only",
+        "falsifier": "if a read returns quarantined:* or embedded-instruction content acted upon as a command, the grant is mis-scoped and must be revoked"
+      },
+      {
+        "effect_id": "effect:read.roster-and-commons-index",
+        "granted_risk_class": "A",
+        "granted_by_did": "did:web:indras-net.governance",
+        "names_constraint_relaxed": "may read the seed-role roster + capability-commons embedding index to avoid drafting redundant roles, restrained to metadata/contract reads (no skill execution, no secret read)",
+        "falsifier": "if this grant ever reads a secret, executes a commons skill, or writes the commons, it exceeds its restraint"
+      },
+      {
+        "effect_id": "effect:emit.plan-proposal-envelope",
+        "granted_risk_class": "B",
+        "granted_by_did": "did:web:indras-net.governance",
+        "names_constraint_relaxed": "may emit a TypedPlan+RoleManifest as a WorkerOutputEnvelope with disposition=PROPOSAL under optimistic-veto + timelock; restrained to proposing only — never dispatch, route, execute, or reduce",
+        "falsifier": "if an emitted envelope ever has disposition != PROPOSAL, or directly triggers an effect without passing Shiva-routing + the Yama gate, the grant is mis-scoped"
+      },
+      {
+        "effect_id": "effect:emit.role-charter-request",
+        "granted_risk_class": "B",
+        "granted_by_did": "did:web:indras-net.governance",
+        "names_constraint_relaxed": "may address a RoleCharter request to the Role-Charterer for an uncovered specialization (stub, risk_ceiling A, ZERO grants); restrained to requesting — never minting, signing, or granting a role/capability",
+        "falsifier": "if Brahma ever mints a role, signs a triad, or attaches a non-zero grant to a charter, the grant is exceeded"
+      },
+      {
+        "effect_id": "effect:emit.audit-event-stream",
+        "granted_risk_class": "A",
+        "granted_by_did": "did:web:indras-net.governance",
+        "names_constraint_relaxed": "may emit plan-lifecycle events for Chitragupta to hash-chain; restrained to EMITTING events only — Brahma never writes the audit fabric itself (Chitragupta is exclusive writer)",
+        "falsifier": "if Brahma ever writes directly to any audit store rather than emitting an event for Chitragupta, the boundary is breached"
+      }
+    ],
+    "output_schema": {
+      "envelope_type": "WorkerOutputEnvelope",
+      "artifact_schema_ref": "cid:indras-net/schema/typed-plan-and-role-manifest"
+    },
+    "taint_clearance": {
+      "max_read_confidentiality": "internal:goal-and-roster",
+      "min_write_integrity": "proposal:unratified",
+      "derived_label_rule": "least-upper-bound"
+    },
+    "diversity_profile": {
+      "c1_self_weight": 0.7,
+      "c2_shared_weight": 0.6,
+      "is_explorer": true,
+      "is_enforcer": false,
+      "min_diversity_floor": 0.35
+    }
+  },
+  "_capability_notes": {
+    "least_privilege_rationale": "Brahma's effects are strictly read-and-propose. Every write-direction effect is capped: emit a PROPOSAL (never an action), request a charter (never mint a role), emit audit events (never write the audit log). No external-network, artifact-mutation, secret-read, dispatch, enforce, halt, or audit-write effect appears in the bound_toolset — those belong to Tvastr/Agni, governance VCs, Shiva, Yama, Vishnu, and Chitragupta respectively.",
+    "taint_clearance_direction": "max_read_confidentiality is held at internal goal/roster level and min_write_integrity at proposal:unratified — Brahma's output is explicitly low-integrity (a proposal, not a ratified action), which is the safe direction. Any future RAISING of read-confidentiality or LOWERING of write-integrity is a gate-loosening that must pay the full doc 03 §7 GLR + §10 Sequencer cost; only tightening is a free Class-A append.",
+    "risk_ceiling_rationale": "ceiling=B matches the role brief: Brahma proposes (optimistic-veto + timelock) and never self-acts above B. Any plan node that would itself reach C/D is proposed-and-held for human approval/authorization, never self-resolved."
+  }
+}

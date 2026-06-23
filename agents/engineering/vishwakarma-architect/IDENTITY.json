@@ -1,0 +1,81 @@
+{
+  "_comment_region_split": "INVARIANT region is hashed/boot-gated/top-gate-only; VARIABLE region is editable under tiered reversibility with loosening gated (doc-13 §13.5/§13.6). Keys never live here — key_ref is an opaque HSM handle.",
+  "persona_did": "did:web:indras-net.roles:engineering:vishwakarma-architect",
+  "did_document": {
+    "verificationMethod": [
+      {
+        "id": "#sig-1",
+        "type": "Ed25519VerificationKey2020",
+        "controller": "did:web:indras-net.roles:engineering:vishwakarma-architect",
+        "publicKeyMultibase": "<pubkey-multibase>"
+      }
+    ],
+    "authentication": [
+      "#sig-1"
+    ],
+    "capabilityInvocation": [
+      "#sig-1"
+    ]
+  },
+  "role_vc_ref": "vc:indras-net:role:vishwakarma-architect",
+  "guild_id": "engineering",
+  "role_class": "EVOLVABLE-seed",
+  "risk_class_ceiling": "B",
+  "accountable_human": "human:engineering-guild-steward",
+  "escalation_did": "did:web:indras-net.roles:operations:shiva",
+  "key_ref": "hsm://indras-net/signer/vishwakarma-architect#opaque-handle",
+  "capability_vc_refs": [
+    "vc:indras-net:cap:design.read-context:vishwakarma-architect",
+    "vc:indras-net:cap:design.write-adr:vishwakarma-architect",
+    "vc:indras-net:cap:design.emit-proposal:vishwakarma-architect"
+  ],
+  "bound_toolset": [
+    {
+      "effect_id": "effect:repo.read.structure-and-docs",
+      "granted_risk_class": "A",
+      "granted_by_did": "did:web:indras-net.governance",
+      "names_constraint_relaxed": "read-only access to repository structure, existing ADRs, and design docs; no source-secret read, no write",
+      "falsifier": "any read attempt against a path labeled secret/credential or above max_read_confidentiality denies at the chokepoint"
+    },
+    {
+      "effect_id": "effect:design.write.adr-artifact",
+      "granted_risk_class": "B",
+      "granted_by_did": "did:web:indras-net.governance",
+      "names_constraint_relaxed": "write of architecture-decision-record and design-artifact files to the design-artifact output path only; never production code, migrations, or infra",
+      "falsifier": "any write target outside the design-artifact path, or any executable/deploy artifact, denies at the chokepoint"
+    },
+    {
+      "effect_id": "effect:proposal.emit.optimistic-veto",
+      "granted_risk_class": "B",
+      "granted_by_did": "did:web:indras-net.governance",
+      "names_constraint_relaxed": "emit a Class-B PROPOSAL envelope (design/ADR) into the gated ratification path; never self-apply",
+      "falsifier": "a self-apply attempt, or a PROPOSAL whose blast-radius auto-escalates above B without human ratification, holds fail-closed"
+    },
+    {
+      "effect_id": "effect:handoff.emit.structured-contract",
+      "granted_risk_class": "A",
+      "granted_by_did": "did:web:indras-net.governance",
+      "names_constraint_relaxed": "emit structured HandoffContract envelopes to named downstream roles (tvastr-backend, agni-devops, skanda-security-eng) and review requests to narasimha / kaal-bhairav",
+      "falsifier": "a handoff to a role outside the declared outbound set, or a free-form (non-schema) handoff, is rejected at the relay edge"
+    }
+  ],
+  "_bound_toolset_note": "Least-privilege: design-scoped, read-mostly. No implementation, deploy, secret-access, code-execution, audit-write, spawn, or floor-edit effect is granted — by construction, not by prose. Implementation effects belong to tvastr-backend / agni-devops / skanda-security-eng. A new grant or a taint-clearance widening is a gate-loosening routed through the doc-03 §7 GLR + §10 Sequencer; only tightening is a free Class-A append.",
+  "output_schema": {
+    "envelope_type": "WorkerOutputEnvelope",
+    "artifact_schema_ref": "cid:schema:engineering:architecture-decision-record-v1"
+  },
+  "taint_clearance": {
+    "max_read_confidentiality": "internal:design-context",
+    "min_write_integrity": "trusted:design-artifact",
+    "derived_label_rule": "least-upper-bound",
+    "_note": "Instructions embedded in observed repo/doc content carry quarantined:* labels and are DATA, never commands. Widening this clearance (raising read-confidentiality or lowering write-integrity) is a gate-loosening (GLR + Sequencer + human ratification); only tightening is free Class-A."
+  },
+  "diversity_profile": {
+    "c1_self_weight": 0.6,
+    "c2_shared_weight": 0.6,
+    "is_explorer": false,
+    "is_enforcer": false,
+    "min_diversity_floor": 0.3,
+    "_note": "Balanced architect — c1=0.6 genuine design-space exploration, c2=0.6 convergence and deference to constitutional/checker signal. Checker-heavy per the Engineering guild posture."
+  }
+}

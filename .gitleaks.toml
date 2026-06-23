@@ -1,0 +1,20 @@
+# Gitleaks configuration for Indra's Net.
+#
+# Extends the default ruleset (so real secrets are still caught) and allowlists
+# a small set of PUBLIC example identifiers used in the reference schemas. These
+# are illustrative values from open specifications, not secrets:
+#   - W3C `did:key` example Ed25519 PUBLIC keys (e.g. z6Mkha...) — public by design.
+#   - CIDv1 content addresses (e.g. bafkrei...) — public content hashes, not keys.
+# The default generic-high-entropy rule flags them on entropy alone; they are safe.
+
+title = "Indras Net gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Public example identifiers in reference schemas (W3C did:key public keys and CIDv1 content addresses) are not secrets."
+regexes = [
+  '''z6Mk[1-9A-HJ-NP-Za-km-z]{40,}''',
+  '''ba[a-z2-7]{40,}''',
+]

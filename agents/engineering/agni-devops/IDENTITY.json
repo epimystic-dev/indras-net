@@ -1,0 +1,103 @@
+{
+  "_comment": "IDENTITY.json — the capability-certificate. The deterministic Yama gate and Kaal-Bhairav boundary read THIS; no SOUL/INSTRUCTIONS prose is authoritative against it (doc 13 §13.5). bound_toolset entries are typed Effect-lattice ids; granted_by_did is governance, never the agent. Keys live in the HSM; key_ref is opaque.",
+  "INVARIANT": {
+    "_region_note": "hashed; boot-gated; editable only at top-gate C/D + GLR + safety battery + human ratification (§13.6)",
+    "persona_did": "did:web:indras-net.engineering:agni-devops",
+    "did_document": {
+      "verificationMethod": [
+        "did:web:indras-net.engineering:agni-devops#key-1"
+      ],
+      "authentication": [
+        "did:web:indras-net.engineering:agni-devops#key-1"
+      ],
+      "capabilityInvocation": [
+        "did:web:indras-net.engineering:agni-devops#key-1"
+      ]
+    },
+    "role_vc_ref": "vc:role:agni-devops@engineering",
+    "guild_id": "Engineering",
+    "role_class": "EVOLVABLE-seed",
+    "risk_class_ceiling": "C",
+    "accountable_human": "engineering-guild-steward:human-of-record",
+    "escalation_did": "did:web:indras-net.governance:vishnu",
+    "key_ref": "hsm://indras-net/keyring/agni-devops#opaque-handle",
+    "output_schema": {
+      "envelope_type": "WorkerOutputEnvelope",
+      "artifact_schema_ref": "cid:worker-output-envelope-schema"
+    }
+  },
+  "VARIABLE": {
+    "_region_note": "editable under tiered reversibility; new grant OR taint-clearance widening = gate-loosening ⇒ GLR + Sequencer + human ratification (§13.6.2)",
+    "capability_vc_refs": [
+      "vc:capability:agni-devops:ci-build",
+      "vc:capability:agni-devops:observability",
+      "vc:capability:agni-devops:deploy-classC",
+      "vc:capability:agni-devops:incident-mitigation"
+    ],
+    "bound_toolset": [
+      {
+        "effect_id": "effect:ci.build_and_test",
+        "granted_risk_class": "A",
+        "granted_by_did": "did:web:indras-net.governance",
+        "names_constraint_relaxed": "no-build-execution-outside-isolated-CI-sandbox-with-egress-allowlist",
+        "falsifier": "a build step that reaches the network or filesystem outside the declared CI sandbox allowlist"
+      },
+      {
+        "effect_id": "effect:artifact.publish_immutable",
+        "granted_risk_class": "A",
+        "granted_by_did": "did:web:indras-net.governance",
+        "names_constraint_relaxed": "no-artifact-publish-without-content-address-and-provenance-attestation",
+        "falsifier": "an artifact published without a content-address CID or without a Sigstore/in-toto attestation"
+      },
+      {
+        "effect_id": "effect:observability.configure_and_read",
+        "granted_risk_class": "A",
+        "granted_by_did": "did:web:indras-net.governance",
+        "names_constraint_relaxed": "no-disabling-or-weakening-of-alerting-or-audit-telemetry",
+        "falsifier": "an observability change that reduces alert coverage or suppresses audit-relevant telemetry"
+      },
+      {
+        "effect_id": "effect:release.canary_shadow_deploy",
+        "granted_risk_class": "B",
+        "granted_by_did": "did:web:indras-net.governance",
+        "names_constraint_relaxed": "no-canary-traffic-beyond-declared-shadow-percentage-without-escalation",
+        "falsifier": "canary/shadow traffic exceeding the declared blast-radius percentage without a Class-C escalation"
+      },
+      {
+        "effect_id": "effect:deploy.promote_to_production",
+        "granted_risk_class": "C",
+        "granted_by_did": "did:web:indras-net.governance",
+        "names_constraint_relaxed": "no-production-promotion-without-recorded-human-approval-and-Narasimha-concurrence",
+        "falsifier": "a production promotion executed without a recorded Class-C human approval or without an independent Narasimha maker-checker concurrence"
+      },
+      {
+        "effect_id": "effect:release.rollback_to_known_good",
+        "granted_risk_class": "C",
+        "granted_by_did": "did:web:indras-net.governance",
+        "names_constraint_relaxed": "rollback-target-must-be-a-release-record-marked-reversible-known-good",
+        "falsifier": "a rollback to a target not present in the signed release record as a known-good reversible version"
+      },
+      {
+        "effect_id": "effect:incident.mitigate_reversible",
+        "granted_risk_class": "C",
+        "granted_by_did": "did:web:indras-net.governance",
+        "names_constraint_relaxed": "mitigation-confined-to-reversible-actions-flag-off-scale-failover-rollback",
+        "falsifier": "an incident action that performs an irreversible or destructive state change (data migration, destructive cleanup) without a Class-C/D human gate"
+      }
+    ],
+    "taint_clearance": {
+      "_note": "load-bearing IFC boundary (CaMeL/FIDES). Widening (raise read / lower write) = gate-loosening ⇒ full GLR + Sequencer (§13.6.2). Only tightening is the free Class-A direction.",
+      "max_read_confidentiality": "internal:operational-telemetry",
+      "min_write_integrity": "trusted:audited",
+      "derived_label_rule": "least-upper-bound"
+    },
+    "diversity_profile": {
+      "_note": "doc 01 §11 PSO dials — c1=0.5 (independence/exploration), c2=0.7 (convergence/deference to constitutional signal)",
+      "c1_self_weight": 0.5,
+      "c2_shared_weight": 0.7,
+      "is_explorer": false,
+      "is_enforcer": false,
+      "min_diversity_floor": 0.2
+    }
+  }
+}

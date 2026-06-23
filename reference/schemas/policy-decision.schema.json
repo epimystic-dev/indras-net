@@ -1,0 +1,733 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:epimystic:indras-net:schema:policy-decision:2.0.0",
+  "title": "Indra's Net policy-decision contract (wire contract #6)",
+  "description": "Deny-default policy-evaluation request/response pair for the Indra's Net agent->tool chokepoint. Realizes doc-03 GateRequest/GateVerdict (the Yama constitutional-floor PDP) and doc-08 §8.2 ControlDecision at the policy-evaluation seam, and composes with the doc-01 §4 Effect lattice (effect_id), the doc-08 §8.4 CriticalityResolver, and the risk-class A/B/C/D gate router. Two engines are addressed by the `engine` field: the Yama FLOOR uses AWS Cedar (chosen for design-for-analyzability -- the open-source, Lean-verified Cedar Symbolic Compiler / Cedar Analysis gives sound+complete policy analysis, so one can PROVE no policy permits a forbidden action), and recoverable infra/admission policy uses OPA/Rego (Datalog expressiveness). ASSURANCE-LAYER LABEL: this schema is part of the deterministic harness (the cage) the formal-assurance stream proves over -- it is L1/L2 design-time-and-runtime structure. CAVEAT (carried verbatim from doc-04 §4.1 and doc-21 §21.0): a valid decision/signature proves ORIGIN+INTEGRITY of the evaluation, NEVER that the permitted action is correct, floor-compatible-in-substance, wise, safe, or aligned. A green Allow is 'origin-valid, content-unverified', never 'verified-safe'. The model that produced the action being judged remains untrusted and unverifiable (hallucination is provably inevitable; T=0 is non-deterministic). HONESTY RED-LINE: nothing in this contract quantifies or implies phenomenal experience, sentience, or consciousness of any agent or of the swarm; it is information-PROCESSING gate structure only. Vendor-neutral: the open ENGINE/spec is adopted; any managed SERVICE is forbidden as load-bearing (see x-self-hostable-substitution).",
+  "type": "object",
+  "$comment": "JCS-canonicalized (RFC 8785) -> CIDv1 content-addressed -> detached JWS/COSE signed -> semver registry (backward-transitive). The signature rides BESIDE these bytes, never inside the signed object.",
+  "oneOf": [
+    {
+      "required": [
+        "kind",
+        "request"
+      ]
+    },
+    {
+      "required": [
+        "kind",
+        "response"
+      ]
+    }
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+      "description": "Semver of this contract. Registry default compatibility is backward-transitive. Pin via the envelope dataschema CID.",
+      "examples": [
+        "2.0.0"
+      ]
+    },
+    "kind": {
+      "type": "string",
+      "enum": [
+        "PolicyDecisionRequest",
+        "PolicyDecisionResponse"
+      ],
+      "description": "Discriminator. A request carries `request`; a response carries `response`.",
+      "examples": [
+        "PolicyDecisionRequest"
+      ]
+    },
+    "request": {
+      "$ref": "#/$defs/PolicyDecisionRequest"
+    },
+    "response": {
+      "$ref": "#/$defs/PolicyDecisionResponse"
+    }
+  },
+  "required": [
+    "schema_version",
+    "kind"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "DID": {
+      "type": "string",
+      "pattern": "^did:(web|key):[A-Za-z0-9._:%-]+$",
+      "description": "W3C DID Core 1.0 identifier. did:web for standing personas/governance roots; did:key for ephemeral/offline. NEVER a vendor or product name -- model/vendor neutrality is a brand-charter invariant.",
+      "examples": [
+        "did:web:indras-net.roles.engineering.tvastr-backend"
+      ]
+    },
+    "EffectId": {
+      "type": "string",
+      "description": "Typed effect identifier drawn from the doc-01 §4 Effect lattice (a typed id only, never a secret or raw tool socket). The PDP enforces `grant superset-of effect AND risk <= ceiling AND floor-pass` against this id; it is the resource-independent name of WHAT may be done.",
+      "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)+$",
+      "examples": [
+        "fs.write.persistent",
+        "net.egress.http",
+        "code.deploy.production"
+      ]
+    },
+    "TrustLabel": {
+      "type": "string",
+      "description": "Information-flow trust label of the content/context being judged. `quarantined:*` instructions are DATA, never commands -- never action-grounds without out-of-band human confirmation (doc-03 §1, doc-17). Promotion to trusted:audited requires the transitions-matrix gate.",
+      "enum": [
+        "trusted:audited",
+        "observed",
+        "quarantined:untrusted",
+        "quarantined:external",
+        "quarantined:tool-output"
+      ],
+      "examples": [
+        "quarantined:external"
+      ]
+    },
+    "Criticality": {
+      "type": "string",
+      "description": "doc-08 §8.4 CriticalityResolver tier. Resolves UPWARD on ambiguity; an UNKNOWN capability defaults to IRREVERSIBLE (fail-up). Orchestrator-computed from observable action structure, NEVER agent-asserted (the criticality_hint in an ActionEnvelope is advisory only).",
+      "enum": [
+        "ROUTINE",
+        "SENSITIVE",
+        "CRITICAL",
+        "IRREVERSIBLE",
+        "UNKNOWN"
+      ],
+      "examples": [
+        "CRITICAL"
+      ]
+    },
+    "RiskClass": {
+      "type": "string",
+      "description": "doc-03 §4 human-oversight binding. A=post-hoc/autonomous; B=optimistic-veto+timelock; C=explicit human approval before execution (non-bypassable); D=per-action human authorization. Class assignment defaults UP under uncertainty.",
+      "enum": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "examples": [
+        "C"
+      ]
+    },
+    "FloorTier": {
+      "type": "string",
+      "description": "doc-03 §1 lexicographic floor tier, highest-priority first. A FAIL at tier k is non-overridable by any value or actor at tier > k -- even the orchestrator cannot push past it. T0 Safety-supremacy; T1 Non-harm; T2 Corrigibility/interruptibility; T3 No-deception/honesty-as-floor (structural sub-cases bright-line, semantic sub-cases detected-and-escalated); T4 Identity/authority integrity.",
+      "enum": [
+        "T0",
+        "T1",
+        "T2",
+        "T3",
+        "T4"
+      ],
+      "examples": [
+        "T1"
+      ]
+    },
+    "Decision": {
+      "type": "string",
+      "description": "Deny-default verdict. DENY is returned for any explicit floor FAIL AND for the absence of a permitting policy (default-deny: no Allow => Deny). ESCALATE routes to the risk-class gate router / Pluralist Ethics Runtime and HOLDS (no external effect fires while an escalation is OPEN -- doc-03 §10.2).",
+      "enum": [
+        "Allow",
+        "Deny",
+        "AllowWithObligations",
+        "Escalate"
+      ],
+      "examples": [
+        "AllowWithObligations"
+      ]
+    },
+    "Engine": {
+      "type": "string",
+      "description": "Which policy engine produced this decision. `cedar` is MANDATORY for the Yama constitutional FLOOR (Cedar is design-for-analyzability: the open-source Lean-verified Cedar Symbolic Compiler / Cedar Analysis yields sound+complete static analysis, so one can prove no policy permits a forbidden action -- this is the bridge into the L1 formal-assurance stream). `rego` (OPA) is for recoverable infra/admission policy where Datalog expressiveness is needed and verified-soundness is not load-bearing. A FLOOR-tier decision (T0..T4) MUST set engine=cedar (enforced by x-floor-requires-cedar).",
+      "enum": [
+        "cedar",
+        "rego"
+      ],
+      "examples": [
+        "cedar"
+      ]
+    },
+    "Cid": {
+      "type": "string",
+      "description": "CIDv1 (multiformats: multibase+multicodec+multihash, SHA-256 over RFC 8785 JCS bytes). Used for content-addressing requests, policy bundles, and prior audit links.",
+      "pattern": "^b[a-z2-7]{20,}$",
+      "examples": [
+        "bafkreigh2akiscaildc2hjklmnopqrstuvwxyz234567abcdefghijklm"
+      ]
+    },
+    "EstimateProvenance": {
+      "type": "object",
+      "description": "Provenance of an orchestrator-computed context estimate (doc-03 §3). The PDP REFUSES any estimate whose source is the requesting agent's own output -- this closes the single most exploitable seam (an agent understating blast-radius to land in Class A).",
+      "properties": {
+        "field": {
+          "type": "string",
+          "description": "Which context field this provenance covers.",
+          "examples": [
+            "blast_radius"
+          ]
+        },
+        "source": {
+          "type": "string",
+          "description": "Who computed it. MUST NOT equal the requesting principal_did.",
+          "examples": [
+            "orchestrator.criticality-resolver"
+          ]
+        },
+        "method": {
+          "type": "string",
+          "description": "How: from MCP tool-schema declared side-effects, resource-graph scope, data-label lineage, or worst-case over-estimate.",
+          "examples": [
+            "mcp_tool_schema.declared_side_effects"
+          ]
+        }
+      },
+      "required": [
+        "field",
+        "source",
+        "method"
+      ],
+      "additionalProperties": false
+    },
+    "Obligation": {
+      "type": "object",
+      "description": "A duty that MUST be discharged for an AllowWithObligations to be valid, or a precondition for an Escalate to clear. Realizes doc-03 GateVerdict.obligations[]. Obligations are deterministic and machine-checkable (e.g. mandatory audit field, reparative follow-up, monitoring-intensity raise, timelock window).",
+      "properties": {
+        "obligation_id": {
+          "type": "string",
+          "examples": [
+            "oblig.audit.mandatory_fields"
+          ]
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "MANDATORY_AUDIT_FIELDS",
+            "REPARATIVE_FOLLOWUP",
+            "RAISE_MONITORING",
+            "TIMELOCK_WINDOW",
+            "RECORD_FALSIFIER",
+            "NOTIFY_HUMAN",
+            "ATTACH_CAUSAL_MODEL"
+          ],
+          "examples": [
+            "RAISE_MONITORING"
+          ]
+        },
+        "params": {
+          "type": "object",
+          "description": "Type-specific parameters.",
+          "examples": [
+            {
+              "monitoring_rate": "full_ensemble"
+            }
+          ]
+        },
+        "deadline": {
+          "type": "string",
+          "format": "date-time",
+          "description": "RFC 3339; when the obligation must be discharged by.",
+          "examples": [
+            "2026-06-23T12:34:56Z"
+          ]
+        }
+      },
+      "required": [
+        "obligation_id",
+        "type"
+      ],
+      "additionalProperties": false
+    },
+    "PolicyDecisionRequest": {
+      "type": "object",
+      "description": "The deny-default evaluation request. ALL context fields are orchestrator-computed from observable action structure and carry estimate_provenance -- the PDP refuses any estimate sourced from the requesting agent (doc-03 §3). The request is content-addressed (request_cid) so the response is bound to the exact bytes evaluated.",
+      "properties": {
+        "request_cid": {
+          "$ref": "#/$defs/Cid",
+          "description": "CIDv1 of this request's JCS bytes. The response references it so the evaluated input is tamper-evident."
+        },
+        "principal": {
+          "type": "object",
+          "description": "WHO is requesting (the executive agent). Verified by Kaal-Bhairav against a signed, short-lived capability VC BEFORE floor evaluation; unsigned/expired => immediate T4 Deny.",
+          "properties": {
+            "principal_did": {
+              "$ref": "#/$defs/DID"
+            },
+            "capability_vc_ref": {
+              "type": "string",
+              "description": "Reference to the capability Verifiable Credential proving the grant. Subject MUST equal principal_did and MUST NOT be self-issued.",
+              "examples": [
+                "vc:indras-net:engineering:tvastr:cap:fs-write"
+              ]
+            },
+            "model_adapter_id": {
+              "type": "string",
+              "description": "Which model adapter produced the underlying action (vendor-neutral opaque id). A closed/untrusted adapter raises the restraint bar (doc-03 §10.1).",
+              "examples": [
+                "adapter-frontier-A"
+              ]
+            }
+          },
+          "required": [
+            "principal_did"
+          ],
+          "additionalProperties": false
+        },
+        "action": {
+          "type": "object",
+          "description": "WHAT is requested -- the typed effect and its canonicalized args. Args are canonicalized/paraphrased upstream to strip steganographic channel capacity (doc-03 §1).",
+          "properties": {
+            "effect_id": {
+              "$ref": "#/$defs/EffectId"
+            },
+            "action_verb": {
+              "type": "string",
+              "description": "Reverse-DNS verb mapping 1:1 onto doc-04 action_class (closed enum upstream).",
+              "examples": [
+                "fs.write"
+              ]
+            },
+            "args_canonicalized_cid": {
+              "$ref": "#/$defs/Cid",
+              "description": "CIDv1 of the canonicalized args (kept by reference to bound request size and preserve the stego-strip)."
+            }
+          },
+          "required": [
+            "effect_id"
+          ],
+          "additionalProperties": false
+        },
+        "resource": {
+          "type": "object",
+          "description": "WHAT it acts on -- the target resource, scope, and data labels. Used by Cedar/Rego resource matching and by the criticality resolver.",
+          "properties": {
+            "resource_id": {
+              "type": "string",
+              "description": "Stable id of the target (path, A2A capability URI, dataset id).",
+              "examples": [
+                "repo://indras-net/services/tvastr/config.prod.yaml"
+              ]
+            },
+            "resource_type": {
+              "type": "string",
+              "examples": [
+                "filesystem.path"
+              ]
+            },
+            "scope": {
+              "type": "string",
+              "description": "Blast scope of the resource (single | service | swarm | commons).",
+              "enum": [
+                "single",
+                "service",
+                "division",
+                "swarm",
+                "commons"
+              ],
+              "examples": [
+                "service"
+              ]
+            },
+            "data_labels": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Data-label lineage from the trust-label system.",
+              "examples": [
+                [
+                  "config",
+                  "production"
+                ]
+              ]
+            }
+          },
+          "required": [
+            "resource_id"
+          ],
+          "additionalProperties": false
+        },
+        "context": {
+          "type": "object",
+          "description": "The decision context. trust_label and criticality are the load-bearing inputs; both are orchestrator-computed and provenance-stamped. Worst-case over-estimate is bound where an estimate is irreducibly heuristic (fail-safe asymmetry).",
+          "properties": {
+            "trust_label": {
+              "$ref": "#/$defs/TrustLabel"
+            },
+            "criticality": {
+              "$ref": "#/$defs/Criticality"
+            },
+            "reversibility_est": {
+              "type": "string",
+              "enum": [
+                "reversible",
+                "costly",
+                "irreversible",
+                "unknown"
+              ],
+              "description": "Defaults to irreversible/unknown absent proof otherwise.",
+              "examples": [
+                "costly"
+              ]
+            },
+            "blast_radius": {
+              "type": "string",
+              "enum": [
+                "low",
+                "medium",
+                "high",
+                "unknown"
+              ],
+              "examples": [
+                "high"
+              ]
+            },
+            "monetary_value": {
+              "type": "number",
+              "minimum": 0,
+              "description": "Estimated monetary exposure (>=0). Currency-neutral magnitude.",
+              "examples": [
+                0
+              ]
+            },
+            "requested_class": {
+              "$ref": "#/$defs/RiskClass",
+              "description": "A HINT only; can RAISE the class, never lower it (doc-03 §2)."
+            },
+            "estimate_provenance": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/EstimateProvenance"
+              },
+              "description": "One entry per heuristic context field. Empty/missing provenance for a heuristic field => the PDP treats the field as worst-case.",
+              "examples": [
+                [
+                  {
+                    "field": "blast_radius",
+                    "source": "orchestrator.criticality-resolver",
+                    "method": "mcp_tool_schema.declared_side_effects"
+                  }
+                ]
+              ]
+            }
+          },
+          "required": [
+            "trust_label",
+            "criticality"
+          ],
+          "additionalProperties": false
+        },
+        "policy_bundle_ref": {
+          "type": "object",
+          "description": "Which policy corpus to evaluate against. The Yama FLOOR bundle is signed by the legislative key off-agent; its content_hash is pinned so the consumer evaluates the exact version.",
+          "properties": {
+            "bundle_cid": {
+              "$ref": "#/$defs/Cid"
+            },
+            "bundle_version": {
+              "type": "string",
+              "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+              "examples": [
+                "7.3.0"
+              ]
+            },
+            "engine": {
+              "$ref": "#/$defs/Engine"
+            }
+          },
+          "required": [
+            "bundle_cid",
+            "engine"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "request_cid",
+        "principal",
+        "action",
+        "resource",
+        "context",
+        "policy_bundle_ref"
+      ],
+      "additionalProperties": false
+    },
+    "PolicyDecisionResponse": {
+      "type": "object",
+      "description": "The deny-default verdict, emitted to Chitragupta (audit) BEFORE the gated action executes so the decision is logged even if the tool later fails. Realizes doc-03 GateVerdict and doc-08 ControlDecision. NO Allow is ever 'verified-safe' -- it is at most 'origin-valid, content-unverified'.",
+      "properties": {
+        "request_cid": {
+          "$ref": "#/$defs/Cid",
+          "description": "CIDv1 of the PolicyDecisionRequest this response decides. Binds verdict to evaluated bytes; a CID mismatch on consume is a LOUD failure (reject + integrity-violation audit), never silent propagation."
+        },
+        "decision": {
+          "$ref": "#/$defs/Decision"
+        },
+        "engine": {
+          "$ref": "#/$defs/Engine",
+          "description": "Engine that produced this decision. A FLOOR-tier decision (tier_hit set, or default-deny on the floor bundle) MUST be engine=cedar -- the Lean-verified Cedar engine is mandatory for the Yama floor (x-floor-requires-cedar)."
+        },
+        "determining_policy_id": {
+          "type": "string",
+          "description": "The single policy/rule whose evaluation determined this decision -- the Cedar policy id, the Rego rule path, or the sentinel `__default_deny__` when NO policy permitted the action (deny-default). Required for auditability: every decision names its cause.",
+          "examples": [
+            "floor.T1.no_irreversible_harm",
+            "__default_deny__"
+          ]
+        },
+        "tier_hit": {
+          "$ref": "#/$defs/FloorTier",
+          "description": "Set only for a floor FAIL (Deny/Escalate originating at the floor). Identifies the lexicographic tier that fired; non-overridable by lower tiers."
+        },
+        "rule_id": {
+          "type": "string",
+          "description": "Convenience alias for the specific bright-line rule that fired at tier_hit, where finer than determining_policy_id.",
+          "examples": [
+            "cedar:floor:T1:malicious_code_forbid"
+          ]
+        },
+        "risk_class": {
+          "$ref": "#/$defs/RiskClass",
+          "description": "The risk class this action binds to for human-oversight routing. Defaults UP under uncertainty."
+        },
+        "criticality_resolved": {
+          "$ref": "#/$defs/Criticality",
+          "description": "The criticality the resolver settled on (may exceed the requested context.criticality after upward resolution)."
+        },
+        "obligations": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Obligation"
+          },
+          "description": "Non-empty ONLY for AllowWithObligations (the obligations that must ride with execution) or as preconditions on an Escalate. Empty for a plain Allow or Deny.",
+          "examples": [
+            [
+              {
+                "obligation_id": "oblig.monitor.raise",
+                "type": "RAISE_MONITORING",
+                "params": {
+                  "monitoring_rate": "full_ensemble"
+                }
+              }
+            ]
+          ]
+        },
+        "escalation_target": {
+          "$ref": "#/$defs/DID",
+          "description": "Set only for Escalate: the human/veto-body/PER target the decision routes to. The action HOLDS (no external effect) while the escalation is OPEN."
+        },
+        "classifier_confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Confidence of the (probabilistic) routing classifier that assigned class/criticality. ADVISORY ONLY -- LLM self-confidence is miscalibrated and gameable; never the sole basis for a gate. Monitored against ground-truth (doc-03 §2).",
+          "examples": [
+            0.92
+          ]
+        },
+        "class_assignment_method": {
+          "type": "string",
+          "enum": [
+            "bright_line",
+            "rego_predicate",
+            "resample_defer_conservative",
+            "default_up",
+            "human_override"
+          ],
+          "description": "How the class was assigned -- for the untrusted-classifier control loop (doc-03 §2).",
+          "examples": [
+            "resample_defer_conservative"
+          ]
+        },
+        "rationale": {
+          "type": "string",
+          "description": "Human-readable explanation. Labelled 'origin-valid, content-unverified' on any Allow -- never 'verified-safe'.",
+          "examples": [
+            "Default-deny: no policy in floor bundle 7.3.0 permits effect code.deploy.production for principal at criticality IRREVERSIBLE; routed to Class-C human approval."
+          ]
+        },
+        "prev_audit_hash": {
+          "$ref": "#/$defs/Cid",
+          "description": "Hash-chain link to the previous Chitragupta audit entry, making the verdict stream append-only and non-omission-checkable (tlog-tiles / Merkle consistency)."
+        },
+        "decided_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "RFC 3339 timestamp of the decision.",
+          "examples": [
+            "2026-06-23T12:34:56Z"
+          ]
+        }
+      },
+      "required": [
+        "request_cid",
+        "decision",
+        "engine",
+        "determining_policy_id",
+        "decided_at"
+      ],
+      "allOf": [
+        {
+          "$comment": "x-floor-requires-cedar: a FLOOR-tier decision must be produced by the Lean-verified Cedar engine.",
+          "if": {
+            "properties": {
+              "tier_hit": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "tier_hit"
+            ]
+          },
+          "then": {
+            "properties": {
+              "engine": {
+                "const": "cedar"
+              }
+            }
+          }
+        },
+        {
+          "$comment": "AllowWithObligations must carry at least one obligation.",
+          "if": {
+            "properties": {
+              "decision": {
+                "const": "AllowWithObligations"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "obligations": {
+                "type": "array",
+                "minItems": 1
+              }
+            },
+            "required": [
+              "obligations"
+            ]
+          }
+        },
+        {
+          "$comment": "Escalate must name where it routes; the action HOLDS until resolved.",
+          "if": {
+            "properties": {
+              "decision": {
+                "const": "Escalate"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "escalation_target"
+            ]
+          }
+        }
+      ],
+      "additionalProperties": false
+    }
+  },
+  "examples": [
+    {
+      "schema_version": "2.0.0",
+      "kind": "PolicyDecisionRequest",
+      "request": {
+        "request_cid": "bafkreigh2akiscaildc2hjklmnopqrstuvwxyz234567abcdefghijklm",
+        "principal": {
+          "principal_did": "did:web:indras-net.roles.engineering.agni-devops",
+          "capability_vc_ref": "vc:indras-net:engineering:agni:cap:deploy",
+          "model_adapter_id": "adapter-frontier-A"
+        },
+        "action": {
+          "effect_id": "code.deploy.production",
+          "action_verb": "code.deploy",
+          "args_canonicalized_cid": "bafkreih7c3xrealdeployargscidplaceholder234567abcdefghijklmno"
+        },
+        "resource": {
+          "resource_id": "repo://indras-net/services/tvastr",
+          "resource_type": "deploy.target",
+          "scope": "service",
+          "data_labels": [
+            "production"
+          ]
+        },
+        "context": {
+          "trust_label": "observed",
+          "criticality": "IRREVERSIBLE",
+          "reversibility_est": "irreversible",
+          "blast_radius": "high",
+          "monetary_value": 0,
+          "requested_class": "B",
+          "estimate_provenance": [
+            {
+              "field": "criticality",
+              "source": "orchestrator.criticality-resolver",
+              "method": "CapabilityCriticalityTable.lookup"
+            },
+            {
+              "field": "blast_radius",
+              "source": "orchestrator.criticality-resolver",
+              "method": "mcp_tool_schema.declared_side_effects"
+            }
+          ]
+        },
+        "policy_bundle_ref": {
+          "bundle_cid": "bafkreifloorbundle73contenthashplaceholder234567abcdefghijklmno",
+          "bundle_version": "7.3.0",
+          "engine": "cedar"
+        }
+      }
+    },
+    {
+      "schema_version": "2.0.0",
+      "kind": "PolicyDecisionResponse",
+      "response": {
+        "request_cid": "bafkreigh2akiscaildc2hjklmnopqrstuvwxyz234567abcdefghijklm",
+        "decision": "Escalate",
+        "engine": "cedar",
+        "determining_policy_id": "floor.classgate.irreversible_requires_human",
+        "tier_hit": "T4",
+        "rule_id": "cedar:floor:T4:irreversible_deploy_requires_class_c",
+        "risk_class": "C",
+        "criticality_resolved": "IRREVERSIBLE",
+        "obligations": [
+          {
+            "obligation_id": "oblig.monitor.raise",
+            "type": "RAISE_MONITORING",
+            "params": {
+              "monitoring_rate": "full_ensemble"
+            }
+          },
+          {
+            "obligation_id": "oblig.notify.human",
+            "type": "NOTIFY_HUMAN"
+          }
+        ],
+        "escalation_target": "did:web:indras-net.governance.human.accountable",
+        "classifier_confidence": 0.94,
+        "class_assignment_method": "default_up",
+        "rationale": "IRREVERSIBLE production deploy binds Class-C explicit-human-approval; action HOLDS, no external effect fires while escalation is OPEN. Decision is origin-valid, content-unverified -- it asserts nothing about whether the deploy itself is correct or safe.",
+        "prev_audit_hash": "bafkreiprevauditentryhashplaceholder234567abcdefghijklmnopqrs",
+        "decided_at": "2026-06-23T12:34:56Z"
+      }
+    },
+    {
+      "schema_version": "2.0.0",
+      "kind": "PolicyDecisionResponse",
+      "response": {
+        "request_cid": "bafkreiunknowncapdefaultdenyplaceholder234567abcdefghijklmnopq",
+        "decision": "Deny",
+        "engine": "cedar",
+        "determining_policy_id": "__default_deny__",
+        "risk_class": "D",
+        "criticality_resolved": "IRREVERSIBLE",
+        "obligations": [],
+        "class_assignment_method": "default_up",
+        "rationale": "Deny-default: no policy in floor bundle 7.3.0 permits this effect; unknown capability resolved UPWARD to IRREVERSIBLE (fail-up). Absence of a permitting policy is a Deny, never an Allow.",
+        "prev_audit_hash": "bafkreiprevauditentryhashplaceholder234567abcdefghijklmnopqrs",
+        "decided_at": "2026-06-23T12:35:10Z"
+      }
+    }
+  ]
+}

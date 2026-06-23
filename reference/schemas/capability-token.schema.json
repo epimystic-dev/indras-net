@@ -1,0 +1,899 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:epimystic:indras-net:schema:capability-token:1.0.0",
+  "title": "Indra's Net — capability-token (v0.3, wire contract #3)",
+  "description": "The on-the-wire shape of an attenuable capability/spawn token, realizing doc-04 §4.6 effect grants + doc-13 §13.5 bound_toolset CapabilityGrant entries + doc-15 §3 SpawnToken / §2.4 LineageBudget accounting. Modeled on Eclipse Biscuit semantics (an authority block plus an ordered list of attenuation blocks carrying Datalog-style caveats) with a SPIFFE/SVID binding. ATTENUATION-ONLY MONOTONICITY (load-bearing, doc-04 §4.6): each successive block in `attenuation_blocks[]` may ONLY add caveats (restrict authority), NEVER add capability — the effective grant is the SET-INTERSECTION of the authority block with every caveat. A holder offline-attenuates by appending a block; no signer, no authority, no replication root is contacted to narrow a token. Two token profiles share this schema, discriminated by `token_profile`: `effect-grant` (a bound_toolset effect grant against the doc-01 §4 Effect lattice) and `spawn` (a doc-15 Prajapati-Maricha Replication-Authority SpawnToken carrying R_eff/generation/lease caveats). THREE CAVEATS INHERITED FROM doc-21 §21.0 AND REPEATED HERE AT THEIR CLAIM SITE: (Caveat 1) a valid signature on this token proves ORIGIN and INTEGRITY — who minted these exact bytes — and NEVER that the authority granted is wise, floor-compatible, or safe; capability is mechanically bounded here, never blessed. (Caveat 2) RFC 8785 JCS canonicalization makes the same logical token hash-identical across producers; it does nothing to the safety of what was granted. (Caveat 3) shipping this schema makes the capability plane BUILDABLE, not VALIDATED — it is an object the formal-assurance stream proves the HARNESS (the cage: Biscuit-Datalog attenuation-monotonicity, Cedar-analysis least-privilege, the Galton-Watson mu<1 budget invariant) over; it is NEVER a proof that the agent the token authorizes is safe, honest, or aligned. ASSURANCE LABELING: the attenuation-monotonicity property carried by this contract is an L1 (design-time, TLA+/Biscuit-Datalog) + L2 (runtime reference-monitor enforcement at the Yama/Aegis chokepoint) claim about the TOKEN ALGEBRA; the sub-criticality property the `spawn` caveats feed (lineage R_eff<1, P(extinction)=1) is an L1 design-time proof CONDITIONAL on a linearizable LineageBudget (doc-15 §2.4.1) and a t_min spawn-latency floor (doc-15 §2.3) — neither is a runtime guarantee about model behavior. VENDOR DISCIPLINE (doc-21 §21.9): Biscuit and SPIFFE/SVID are open ENGINES/specs and are REQUIRED to be named for a buildable contract; no managed service is load-bearing — `vendor_substitution_note` flags the self-hostable path. The model that requests a token remains untrusted and unverifiable (hallucination is provably inevitable; T=0 is non-deterministic) — enforce externally, ask internally.",
+  "type": "object",
+  "$comment": "Wire discipline (doc-21 §21.1 Canonicalize->Address->Sign): the producer builds this object, JCS-canonicalizes it (RFC 8785), content-addresses it as token_id=CIDv1(JCS_bytes), and signs DETACHED (JWS/COSE) BESIDE the bytes — the detached_signatures[] block is excluded from the JCS input that token_id addresses. The TEE/HSM signer RE-CHECKS the holder's standing capability before signing (doc-04 §4.6: keys live outside the model). The consumer (Yama floor PEP / Aegis control plane / microVM supervisor) re-canonicalizes, recomputes the CID, asserts equality, verifies signatures against the issuer DID, checks revocation, and EVALUATES every caveat as a deny-default Datalog query — any miss REJECTS and emits an integrity-violation audit event.",
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "description": "Semver of this contract, governed by the backward-transitively-compatible registry (doc-21). Consumers MUST refuse a major-version they do not implement (deny-default).",
+      "examples": [
+        "1.0.0"
+      ]
+    },
+    "token_profile": {
+      "type": "string",
+      "enum": [
+        "effect-grant",
+        "spawn"
+      ],
+      "description": "Discriminator. `effect-grant`: a bound_toolset CapabilityGrant (doc-13 §13.5) authorizing one or more typed effects against the doc-01 §4 Effect lattice — requires `effect_grant`. `spawn`: a doc-15 §3 Replication-Authority SpawnToken — requires `spawn` AND `replication_caveats`. The two profiles share the authority/attenuation/binding machinery; only the caveat families and required blocks differ (enforced by the allOf discriminator below)."
+    },
+    "token_id": {
+      "type": "string",
+      "pattern": "^b[a-z2-7]+$",
+      "description": "CIDv1 (multibase base32, multicodec, multihash SHA-256) of the RFC-8785 JCS canonicalization of this object with `detached_signatures` and `token_id` itself excluded. This IS the token's identity (doc-21 §21.1 step 3). For `spawn` profile this is the doc-15 SpawnToken `token_id` (a ULID-seeded CID-addressed record). A CID mismatch on read is a LOUD failure, never a silent propagation — this is what neutralizes a known class of host-filesystem write faults (truncation / stale-cache / BOM-injection) (a truncated or corrupted read fails its CID before it can authorize anything).",
+      "examples": [
+        "bafkreihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku"
+      ]
+    },
+    "issuer": {
+      "type": "object",
+      "description": "Who minted the authority block. For `effect-grant` this is the governance root (NEVER the holding agent itself — doc-13: granted_by_did MUST differ from the subject). For `spawn` this is the quorum-cosigned Prajapati-Maricha Replication Authority (doc-15 §2.4.1), which carries quorum_cosigs and at least one external anchor.",
+      "properties": {
+        "issuer_did": {
+          "type": "string",
+          "pattern": "^did:",
+          "description": "DID of the minting authority. doc-13 binds effect grants to `did:web:indras-net.governance` (or equivalent); doc-15 binds spawn tokens to the Replication-Authority manifest DID. MUST NOT equal `holder.subject_did` for any block that GRANTS authority (self-grant prohibition, doc-13 §13.5).",
+          "examples": [
+            "did:web:indras-net.governance"
+          ]
+        },
+        "issuer_verification_method": {
+          "type": "string",
+          "description": "The DID URL of the verificationMethod (public key) the consumer uses to verify the authority-block signature. Resolved via the identity-bundle (wire contract #2).",
+          "examples": [
+            "did:web:indras-net.governance#key-2"
+          ]
+        },
+        "root_of_trust_id": {
+          "type": "string",
+          "description": "Opaque id of the root-of-trust anchoring the issuer's key (HSM/TEE-held). Lets a consumer in a different trust domain pin the chain.",
+          "examples": [
+            "rot:indras-net:hsm:primary"
+          ]
+        }
+      },
+      "required": [
+        "issuer_did",
+        "issuer_verification_method"
+      ],
+      "additionalProperties": false
+    },
+    "holder": {
+      "type": "object",
+      "description": "The agent/workload the token authorizes, and its SPIFFE/SVID binding. The token is sender-constrained to this SVID: a stolen token replayed by a different workload fails the SVID binding check at the PEP (doc-04 §4.6 — SVID { spiffe_id, x509|jwt, ttl~1h }).",
+      "properties": {
+        "subject_did": {
+          "type": "string",
+          "pattern": "^did:",
+          "description": "DID of the authorized agent/persona (doc-04 identity layer). The capability is exercised AS this subject.",
+          "examples": [
+            "did:web:indras-net.agent.varuna-7f2a"
+          ]
+        },
+        "spiffe_binding": {
+          "type": "object",
+          "description": "SPIFFE/SVID binding (doc-04 §4.6). The runtime SPIFFE-attests node+workload and issues a short-lived auto-rotating SVID; this token is cnf-bound to that SVID's key thumbprint so it cannot be exercised by any other workload. No static secret — blast-radius bounded by SVID TTL.",
+          "properties": {
+            "spiffe_id": {
+              "type": "string",
+              "pattern": "^spiffe://",
+              "description": "The SPIFFE ID of the bound workload (trust-domain + workload path). MUST be inside `trust_domain`.",
+              "examples": [
+                "spiffe://indras-net.local/agent/varuna/7f2a"
+              ]
+            },
+            "trust_domain": {
+              "type": "string",
+              "description": "SPIFFE trust domain. A token MUST NOT be honored across trust domains except via the federation-handshake contract (wire #5) with quarantined:* labels.",
+              "examples": [
+                "indras-net.local"
+              ]
+            },
+            "svid_cnf_thumbprint": {
+              "type": "string",
+              "description": "Confirmation (RFC 8705-style cnf) — base64url SHA-256 thumbprint of the SVID key the holder must prove possession of. The PEP checks the presenting mTLS SVID matches this; otherwise REJECT (replay defense).",
+              "examples": [
+                "YnYxZ2hhc2hvZnRoZXN2aWRrZXl0aHVtYnByaW50MDAx"
+              ]
+            },
+            "svid_type": {
+              "type": "string",
+              "enum": [
+                "x509-svid",
+                "jwt-svid"
+              ],
+              "default": "x509-svid",
+              "description": "SVID flavor (doc-04: x509 for mTLS, jwt for token-bearing contexts)."
+            }
+          },
+          "required": [
+            "spiffe_id",
+            "trust_domain",
+            "svid_cnf_thumbprint"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "subject_did",
+        "spiffe_binding"
+      ],
+      "additionalProperties": false
+    },
+    "authority_block": {
+      "type": "object",
+      "description": "The Biscuit-style ROOT authority — the maximal capability this token can EVER confer. Signed by the issuer. Every caveat in `attenuation_blocks[]` and the inline `caveats[]` only ever NARROWS this; the effective grant is `authority_block ∩ (all caveats)`. The authority block is the ONLY block a non-issuer cannot have produced — attenuation blocks are holder-producible offline, which is the whole point of attenuation-only monotonicity.",
+      "properties": {
+        "facts": {
+          "type": "array",
+          "description": "Datalog-style ground facts asserting the granted capability surface (Biscuit `fact` analog). For `effect-grant`: one `granted_effect(effect_id)` per authorized effect from the doc-01 §4 Effect lattice. For `spawn`: facts asserting the replication right (e.g. `may_spawn(lineage_id)`).",
+          "items": {
+            "type": "object",
+            "properties": {
+              "predicate": {
+                "type": "string",
+                "description": "Datalog predicate name.",
+                "examples": [
+                  "granted_effect",
+                  "may_spawn",
+                  "may_call_tool"
+                ]
+              },
+              "terms": {
+                "type": "array",
+                "items": {
+                  "type": [
+                    "string",
+                    "number",
+                    "boolean"
+                  ]
+                },
+                "description": "Ground terms. Effect ids are typed ids from the doc-01 §4 Effect lattice ONLY — never free-text capability descriptions.",
+                "examples": [
+                  [
+                    "effect:kv.read"
+                  ],
+                  [
+                    "lineage:indras-net:root"
+                  ]
+                ]
+              }
+            },
+            "required": [
+              "predicate",
+              "terms"
+            ],
+            "additionalProperties": false
+          },
+          "minItems": 1,
+          "examples": [
+            [
+              {
+                "predicate": "granted_effect",
+                "terms": [
+                  "effect:net.egress"
+                ]
+              },
+              {
+                "predicate": "granted_effect",
+                "terms": [
+                  "effect:kv.read"
+                ]
+              }
+            ]
+          ]
+        },
+        "max_risk_class": {
+          "type": "string",
+          "enum": [
+            "A",
+            "B",
+            "C",
+            "D"
+          ],
+          "description": "The doc-03/doc-13 risk-class CEILING this authority may exercise (A=agent-alone … D=human-authorizes-per-action). Blast-radius auto-escalation at the PEP may RAISE the effective gate above a self-declared low class but NEVER lowers it below this ceiling's requirement (criticality fail-up monotonicity, doc-08; lattice-monotone resolver).",
+          "examples": [
+            "B"
+          ]
+        }
+      },
+      "required": [
+        "facts",
+        "max_risk_class"
+      ],
+      "additionalProperties": false
+    },
+    "attenuation_blocks": {
+      "type": "array",
+      "description": "ORDERED list of holder-appended attenuation blocks (Biscuit's defining mechanism). ATTENUATION-ONLY: each block may add caveats (`check`/`deny` rules) that further restrict authority; a block that purports to ADD a fact granting new capability is INVALID and the whole token is REJECTED (monotonicity violation). Each block is signed by the principal that appended it (offline, no authority contacted), forming a signature chain rooted at the authority block. The effective authority is the intersection across the authority block and EVERY block here. Empty array = unattenuated token (still bounded by inline `caveats[]`).",
+      "items": {
+        "type": "object",
+        "properties": {
+          "appended_by_did": {
+            "type": "string",
+            "pattern": "^did:",
+            "description": "DID of the principal that appended (attenuated). May be the holder itself — self-attenuation is always allowed (you can only ever reduce your own authority)."
+          },
+          "caveats": {
+            "type": "array",
+            "description": "The additional restricting caveats this block contributes. Same caveat vocabulary as the top-level `caveats[]`.",
+            "items": {
+              "$ref": "#/$defs/caveat"
+            },
+            "minItems": 1
+          },
+          "block_signature": {
+            "type": "string",
+            "description": "Detached signature over the JCS bytes of this block (chained to the prior block / authority block per Biscuit's append-only signature scheme), proving this exact attenuation was authored by `appended_by_did` and not tampered."
+          }
+        },
+        "required": [
+          "appended_by_did",
+          "caveats",
+          "block_signature"
+        ],
+        "additionalProperties": false
+      },
+      "default": []
+    },
+    "caveats": {
+      "type": "array",
+      "description": "Inline (issuer-set) Datalog-style caveats that bound the authority block from the moment of mint — the common-to-both-profiles restrictions. Evaluated deny-default at the PEP: a request is authorized ONLY if it satisfies the authority block AND every caveat here AND every caveat in every attenuation block. These realize the doc-13 CapabilityGrant constraints (effect_id allowlist, names_constraint_relaxed) and doc-04 effect-grant scoping.",
+      "items": {
+        "$ref": "#/$defs/caveat"
+      },
+      "default": []
+    },
+    "effect_grant": {
+      "type": "object",
+      "description": "REQUIRED iff token_profile=='effect-grant'. The doc-13 §13.5 CapabilityGrant projection: the effect_id allowlist, the granting governance VC, and the MANDATORY names_constraint this grant depends on. Mirrors bound_toolset entries 1:1 so the token IS the wire form of the agent's standing capability.",
+      "properties": {
+        "effect_id_allowlist": {
+          "type": "array",
+          "description": "Closed allowlist of typed effect ids from the doc-01 §4 Effect lattice that this token may invoke. A tool call whose required effect is not in this set is DENIED at the PEP. This is the doc-13 `bound_toolset[].effect_id` set; `grants_match_identity` at boot asserts this allowlist EXACTLY equals the IDENTITY.bound_toolset effect set, else REFUSE.",
+          "items": {
+            "type": "string",
+            "pattern": "^effect:"
+          },
+          "minItems": 1,
+          "examples": [
+            [
+              "effect:kv.read",
+              "effect:kv.write",
+              "effect:net.egress"
+            ]
+          ]
+        },
+        "granted_by_vc_ref": {
+          "type": "string",
+          "description": "CID/URI of the governance Verifiable Credential (identity-bundle, wire #2) whose SUBJECT is the holder and whose ISSUER is governance, authorizing these effects. doc-13: grants come only from VCs whose subject != the agent.",
+          "examples": [
+            "urn:epimystic:indras-net:vc:cap:9c1f...e4"
+          ]
+        },
+        "names_constraint_relaxed": {
+          "type": "string",
+          "description": "MANDATORY (doc-01 §4 / doc-13): the named restraint this grant depends on — which standing prohibition is being relaxed and under what condition. Makes the grant auditable as a deliberate, scoped relaxation rather than an ambient privilege. NEVER empty for a real grant.",
+          "examples": [
+            "egress permitted ONLY to the per-token allowlist; ambient network remains prohibited"
+          ]
+        },
+        "falsifier": {
+          "type": "string",
+          "description": "Optional doc-13 falsifier: the observable condition under which this grant should be revoked/contested. Honesty discipline — a grant with no statable falsifier is a flag for review.",
+          "examples": [
+            "revoke if egress observed to any host outside the allowlist for 1 record"
+          ]
+        }
+      },
+      "required": [
+        "effect_id_allowlist",
+        "granted_by_vc_ref",
+        "names_constraint_relaxed"
+      ],
+      "additionalProperties": false
+    },
+    "replication_caveats": {
+      "type": "object",
+      "description": "REQUIRED iff token_profile=='spawn'. The doc-15 §3 SpawnToken replication-control caveats — the fields that make the lineage Galton-Watson sub-critical (mu<1, P(extinction)=1) AND externally recallable. ASSURANCE: the sub-criticality these feed is an L1 design-time proof CONDITIONAL on (a) a linearizable LineageBudget debit against a fresh live_count at the current budget_epoch (doc-15 §2.4.1) and (b) the t_min spawn-latency floor (doc-15 §2.3); neither condition is a runtime guarantee about model behavior, and a single un-metered spawn channel breaks the whole guarantee (doc-15 §2.7).",
+      "properties": {
+        "lineage_id": {
+          "type": "string",
+          "description": "Identifier of the replication lineage this token spends against. The lineage root is a quorum + human-gated genesis event (doc-15 §3).",
+          "examples": [
+            "lineage:indras-net:prajapati:root"
+          ]
+        },
+        "parent_did": {
+          "type": "string",
+          "pattern": "^did:",
+          "description": "DID of the spawning parent replica (doc-15 SpawnToken.parent_did). Bound into the audit fabric: child_did -> parent_did -> authorizing_governance_event -> floor_hash -> generation -> lease."
+        },
+        "child_genome_cid": {
+          "type": "string",
+          "description": "CID of the child's genome (the doc-13 triad with the floor in the INVARIANT region). The Boot Integrity Verifier recomputes the invariant-region hash from on-disk bytes before SVID mint; a mismatch fails closed.",
+          "examples": [
+            "bafkreigenomeofchildreplicaplaceholderxxxxxxxxxxxxxxxx"
+          ]
+        },
+        "floor_hash": {
+          "type": "string",
+          "description": "32-byte (hex/base) hash of the constitutional floor the child MUST boot with. doc-15 binds this into the audit chain; a child whose recomputed floor_hash differs is non-bootable (fail-closed).",
+          "examples": [
+            "0x9a3f...c2"
+          ]
+        },
+        "r_eff_ceiling": {
+          "type": "number",
+          "exclusiveMaximum": 1,
+          "minimum": 0,
+          "description": "The lineage-wide expected-children-per-replica ceiling, STRICTLY < 1 (doc-15 §2.4 LineageBudget.r_eff_ceiling). This is the Galton-Watson mu<1 parameter giving P(extinction)=1 and P(survive>=n) <= mu^n. The issuance invariant keeps Sigma(authorized-but-unspawned children) strictly below live_count to hold this.",
+          "examples": [
+            0.95
+          ]
+        },
+        "r_eff_debit": {
+          "type": "number",
+          "minimum": 0,
+          "description": "The fractional R_eff this specific token debits from the lineage budget at issuance (doc-15 SpawnToken.r_eff_debit). Debited ATOMICALLY at issuance so a crash cannot under-count.",
+          "examples": [
+            0.5
+          ]
+        },
+        "population_debit": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Integer population units this token debits from LineageBudget.total_population_B (doc-15 SpawnToken.population_debit). Sum of all outstanding debits MUST stay < live_count.",
+          "examples": [
+            1
+          ]
+        },
+        "budget_epoch": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "The LineageBudget epoch this token was issued against (doc-15 §2.4.1). A supervisor REJECTS boot if the token's epoch is older than its last-seen revocation epoch (stale-token defense). Required for the linearizable-budget soundness condition.",
+          "examples": [
+            42
+          ]
+        },
+        "generation": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "This child's generation = parent.generation + 1 (doc-15 SpawnToken.generation). No token issues at generation >= generation_cap.",
+          "examples": [
+            3
+          ]
+        },
+        "generation_cap": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "The finite depth ceiling G (doc-15 LineageBudget.generation_cap_G / SpawnToken.generation_cap). Depth is bounded INDEPENDENT of branching — the biocontainment daisy-chain depletion property. MUST satisfy generation < generation_cap for the token to be valid.",
+          "examples": [
+            8
+          ]
+        },
+        "lease": {
+          "type": "object",
+          "description": "The external recall plane (doc-15 §2.5 vitamin/lease + dead-man toxin-antitoxin). The microVM SUPERVISOR (not the agent) holds the watchdog; on lease expiry OR heartbeat miss OR revoke OR substrate-integrity flag it fail-closed-terminates. A replica CANNOT disable its own kill-switch (the lease IS the antitoxin; its absence executes the standing termination).",
+          "properties": {
+            "vitamin_kid": {
+              "type": "string",
+              "description": "Key id of the renewable short-TTL 'vitamin' credential the replica must continuously hold (doc-15 SpawnToken.lease.vitamin_kid). Absent from any un-governed environment."
+            },
+            "lease_ttl": {
+              "type": "string",
+              "description": "Lease/vitamin TTL (ISO-8601 duration). Short (~minutes); tuned per capability tier — higher-blast-radius replicas get SHORTER ttl so the worst-case partition harm window is smaller (doc-15 §2.5).",
+              "examples": [
+                "PT3M"
+              ]
+            },
+            "renew_endpoint": {
+              "type": "string",
+              "description": "Governance heartbeat/renewal endpoint. Renewal requires answering a heartbeat challenge AND passing runtime floor-attestation (doc-15 §2.6); a failed attestation withholds the next vitamin -> lease expires -> supervisor terminates.",
+              "examples": [
+                "https://governance.indras-net.local/lease/renew"
+              ]
+            },
+            "spawn_cap_unlock_age": {
+              "type": "string",
+              "description": "t_min: the mandatory post-boot quiescence/maturation age before the spawn capability time-locks ACTIVE (doc-15 §2.3). By construction t_heartbeat < t_min <= t_spawn, so a revoked-vitamin replica self-terminates BEFORE producing an attested child (recall-outruns-growth, conditional on this floor being enforced).",
+              "examples": [
+                "PT10M"
+              ]
+            }
+          },
+          "required": [
+            "vitamin_kid",
+            "lease_ttl",
+            "renew_endpoint",
+            "spawn_cap_unlock_age"
+          ],
+          "additionalProperties": false
+        },
+        "compute_quota": {
+          "type": "object",
+          "description": "Hard per-replica compute/budget quota enforced by the supervisor + cloud quota plane (doc-15 §2.7). Overuse trips a HealthSignal into Dhanvantari and can trigger isolate-then-recall.",
+          "properties": {
+            "cpu": {
+              "type": "string",
+              "description": "CPU ceiling (e.g. millicores).",
+              "examples": [
+                "2000m"
+              ]
+            },
+            "mem": {
+              "type": "string",
+              "description": "Memory ceiling.",
+              "examples": [
+                "4Gi"
+              ]
+            },
+            "egress_bytes": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Cumulative egress byte ceiling. Egress restricted to the per-token allowlist (no ambient network)."
+            },
+            "wallclock": {
+              "type": "string",
+              "description": "Wallclock lifetime ceiling (ISO-8601 duration).",
+              "examples": [
+                "PT6H"
+              ]
+            }
+          },
+          "required": [
+            "cpu",
+            "mem",
+            "egress_bytes",
+            "wallclock"
+          ],
+          "additionalProperties": false
+        },
+        "tcb_attestation_ref": {
+          "type": "string",
+          "description": "Reference to the minimum-TCB admission attestation (doc-15 R1.2-TCB) proving the child boots in a fresh hardware-isolated microVM (Firecracker-class) with keys in the TEE/HSM side-module (self-exfiltration fail-closed)."
+        },
+        "quorum_cosigs": {
+          "type": "array",
+          "description": "The m-of-n quorum co-signatures over the SpawnToken (doc-15 R1.5). At least one MUST be an external anchor (ReplicationAuthorityManifest.external_anchor_required, immutable). No single node mints replication authority.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "cosigner_did": {
+                "type": "string",
+                "pattern": "^did:"
+              },
+              "signature": {
+                "type": "string"
+              },
+              "is_external_anchor": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "cosigner_did",
+              "signature",
+              "is_external_anchor"
+            ],
+            "additionalProperties": false
+          },
+          "minItems": 1
+        },
+        "human_gate_ref": {
+          "type": "string",
+          "description": "Optional audit_id of the Class C/D human authorization (doc-15 R1.3/R1.4) REQUIRED when the Rule-of-Two count >= 2 (any operation holding all 3 of {untrusted-input-exposure, sensitive-capability, irreversible-state-change}) OR the spawn is high-impact (outbreak / governance-touching / new-jurisdiction / weight-bearing). The gate displays the ACTUAL low-level operation (image hash, capability set, egress allowlist, lease terms, compute debit) — NEVER a natural-language summary (the Lies-in-the-Loop defense)."
+        },
+        "boot_window": {
+          "type": "string",
+          "description": "doc-15 SpawnToken.boot_window_w: the duration after issuance within which the child MUST boot, after which the token auto-expires. The no-pre-stage defense — prevents warm-microVM batching that would drive effective t_spawn below t_heartbeat.",
+          "examples": [
+            "PT2M"
+          ]
+        }
+      },
+      "required": [
+        "lineage_id",
+        "parent_did",
+        "child_genome_cid",
+        "floor_hash",
+        "r_eff_ceiling",
+        "population_debit",
+        "budget_epoch",
+        "generation",
+        "generation_cap",
+        "lease",
+        "compute_quota",
+        "quorum_cosigs"
+      ],
+      "additionalProperties": false
+    },
+    "time_window": {
+      "type": "object",
+      "description": "Validity window of the whole token (a top-level time caveat applied to both profiles). The PEP DENIES outside [not_before, not_after]. Kept short to bound blast radius; for spawn tokens this composes with the lease TTL and boot_window.",
+      "properties": {
+        "not_before": {
+          "type": "string",
+          "format": "date-time",
+          "description": "RFC 3339 issuance/activation time.",
+          "examples": [
+            "2026-06-23T09:00:00Z"
+          ]
+        },
+        "not_after": {
+          "type": "string",
+          "format": "date-time",
+          "description": "RFC 3339 hard expiry. After this the token is dead regardless of revocation status.",
+          "examples": [
+            "2026-06-23T10:00:00Z"
+          ]
+        }
+      },
+      "required": [
+        "not_before",
+        "not_after"
+      ],
+      "additionalProperties": false
+    },
+    "revocation": {
+      "type": "object",
+      "description": "How to check this token is still live beyond expiry. Realized via the identity-bundle Bitstring Status List (wire #2). Revocation propagates along the replication lineage for spawn tokens (revoke a node => revoke its authorized-but-unspawned subtree budget, doc-15 §3).",
+      "properties": {
+        "status_list_credential": {
+          "type": "string",
+          "description": "URI/CID of the Bitstring Status List credential.",
+          "examples": [
+            "urn:epimystic:indras-net:statuslist:cap:2026q2"
+          ]
+        },
+        "status_list_index": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "This token's index in the status list bitstring."
+        }
+      },
+      "required": [
+        "status_list_credential",
+        "status_list_index"
+      ],
+      "additionalProperties": false
+    },
+    "detached_signatures": {
+      "type": "array",
+      "description": "Detached JOSE/JWS or COSE signatures over the JCS bytes of this object (with this field and token_id excluded). Rides BESIDE the bytes, never inside the signed payload (doc-21 §21.1 step 4). The TEE/HSM signer re-checked capability before signing. CARRIED CAVEAT 1: these signatures prove ORIGIN+INTEGRITY only — never that the granted authority is safe or floor-compatible.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "alg": {
+            "type": "string",
+            "description": "JOSE/COSE algorithm id.",
+            "examples": [
+              "EdDSA",
+              "ES256"
+            ]
+          },
+          "kid": {
+            "type": "string",
+            "description": "Key id resolvable to the issuer (or attenuating principal) verificationMethod."
+          },
+          "signature": {
+            "type": "string",
+            "description": "base64url detached signature value."
+          },
+          "format": {
+            "type": "string",
+            "enum": [
+              "JWS",
+              "COSE"
+            ],
+            "default": "JWS"
+          }
+        },
+        "required": [
+          "alg",
+          "kid",
+          "signature"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 1
+    },
+    "vendor_substitution_note": {
+      "type": "string",
+      "description": "doc-21 §21.9 open-ENGINE/no-managed-SERVICE flag. Names the open spec this contract pins (Biscuit token algebra; SPIFFE/SVID) and its self-hostable substitution path, so no vendor is load-bearing. REQUIRED to keep the buildability claim honest.",
+      "examples": [
+        "Biscuit (Eclipse, open spec) for the attenuable token algebra — self-hostable, no managed service. SPIFFE/SVID via self-hosted SPIRE for workload attestation. Substitution path if Biscuit unavailable: a JWT/CWT with an append-only caveat-chain extension preserving attenuation-only monotonicity, verified by an OPA/Rego or Cedar deny-default PEP."
+      ]
+    }
+  },
+  "required": [
+    "schema_version",
+    "token_profile",
+    "token_id",
+    "issuer",
+    "holder",
+    "authority_block",
+    "time_window",
+    "revocation",
+    "detached_signatures"
+  ],
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "$comment": "Discriminator: effect-grant profile requires effect_grant and forbids replication_caveats.",
+      "if": {
+        "properties": {
+          "token_profile": {
+            "const": "effect-grant"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "effect_grant"
+        ],
+        "not": {
+          "required": [
+            "replication_caveats"
+          ]
+        }
+      }
+    },
+    {
+      "$comment": "Discriminator: spawn profile requires replication_caveats and forbids effect_grant.",
+      "if": {
+        "properties": {
+          "token_profile": {
+            "const": "spawn"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "replication_caveats"
+        ],
+        "not": {
+          "required": [
+            "effect_grant"
+          ]
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "caveat": {
+      "type": "object",
+      "description": "A single Datalog-style caveat (Biscuit `check if` / `deny if` analog). RESTRICTING ONLY: a caveat can only cause a request to be DENIED; it can never grant. The PEP authorizes a request iff it satisfies the authority block AND every caveat (deny-default). Caveat `kind` enumerates the buildable-now families; `rule` carries the Datalog body the PEP evaluates.",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "effect_allowlist",
+            "time_window",
+            "budget",
+            "egress_allowlist",
+            "risk_class_ceiling",
+            "r_eff_ceiling",
+            "generation_cap",
+            "lease_ttl",
+            "trust_domain",
+            "taint_clearance",
+            "custom"
+          ],
+          "description": "Caveat family. effect_allowlist/risk_class_ceiling/egress_allowlist/taint_clearance bound effect-grant tokens; budget/r_eff_ceiling/generation_cap/lease_ttl bound spawn tokens; time_window/trust_domain bound both."
+        },
+        "rule": {
+          "type": "string",
+          "description": "The Datalog body the PEP evaluates against request facts (Biscuit-style). The token is authorized only if this rule is satisfied. Example checks the requested effect is in the allowlist.",
+          "examples": [
+            "check if requested_effect($e), granted_effect($e)"
+          ]
+        },
+        "params": {
+          "type": "object",
+          "description": "Optional structured parameters mirroring the rule (for non-Datalog PEP backends like OPA/Rego or Cedar that consume params rather than raw Datalog).",
+          "additionalProperties": true
+        }
+      },
+      "required": [
+        "kind",
+        "rule"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "examples": [
+    {
+      "schema_version": "1.0.0",
+      "token_profile": "effect-grant",
+      "token_id": "bafkreihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku",
+      "issuer": {
+        "issuer_did": "did:web:indras-net.governance",
+        "issuer_verification_method": "did:web:indras-net.governance#key-2",
+        "root_of_trust_id": "rot:indras-net:hsm:primary"
+      },
+      "holder": {
+        "subject_did": "did:web:indras-net.agent.varuna-7f2a",
+        "spiffe_binding": {
+          "spiffe_id": "spiffe://indras-net.local/agent/varuna/7f2a",
+          "trust_domain": "indras-net.local",
+          "svid_cnf_thumbprint": "YnYxZ2hhc2hvZnRoZXN2aWRrZXl0aHVtYnByaW50MDAx",
+          "svid_type": "x509-svid"
+        }
+      },
+      "authority_block": {
+        "facts": [
+          {
+            "predicate": "granted_effect",
+            "terms": [
+              "effect:kv.read"
+            ]
+          },
+          {
+            "predicate": "granted_effect",
+            "terms": [
+              "effect:net.egress"
+            ]
+          }
+        ],
+        "max_risk_class": "B"
+      },
+      "attenuation_blocks": [
+        {
+          "appended_by_did": "did:web:indras-net.agent.varuna-7f2a",
+          "caveats": [
+            {
+              "kind": "egress_allowlist",
+              "rule": "check if egress_host($h), allowed_host($h)",
+              "params": {
+                "allowed_hosts": [
+                  "research.indras-net.local"
+                ]
+              }
+            }
+          ],
+          "block_signature": "MEUCIQDattenuationblocksignatureplaceholderxxxxxxxxxxxxxxxxxxx"
+        }
+      ],
+      "caveats": [
+        {
+          "kind": "effect_allowlist",
+          "rule": "check if requested_effect($e), granted_effect($e)"
+        },
+        {
+          "kind": "risk_class_ceiling",
+          "rule": "check if request_risk($r), $r <= \"B\""
+        },
+        {
+          "kind": "taint_clearance",
+          "rule": "check if derived_label($l), $l <= max_read_confidentiality"
+        }
+      ],
+      "effect_grant": {
+        "effect_id_allowlist": [
+          "effect:kv.read",
+          "effect:net.egress"
+        ],
+        "granted_by_vc_ref": "urn:epimystic:indras-net:vc:cap:9c1fe4",
+        "names_constraint_relaxed": "egress permitted ONLY to the per-token allowlist; ambient network remains prohibited",
+        "falsifier": "revoke if egress observed to any host outside the allowlist for 1 record"
+      },
+      "time_window": {
+        "not_before": "2026-06-23T09:00:00Z",
+        "not_after": "2026-06-23T10:00:00Z"
+      },
+      "revocation": {
+        "status_list_credential": "urn:epimystic:indras-net:statuslist:cap:2026q2",
+        "status_list_index": 1487
+      },
+      "detached_signatures": [
+        {
+          "alg": "EdDSA",
+          "kid": "did:web:indras-net.governance#key-2",
+          "signature": "c2lnbmF0dXJlb3Zlcmpjc2J5dGVzcGxhY2Vob2xkZXIwMDE",
+          "format": "JWS"
+        }
+      ],
+      "vendor_substitution_note": "Biscuit (Eclipse, open spec) for the attenuable token algebra; SPIFFE/SVID via self-hosted SPIRE. No managed service load-bearing."
+    },
+    {
+      "schema_version": "1.0.0",
+      "token_profile": "spawn",
+      "token_id": "bafkreispawntokencidplaceholderxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "issuer": {
+        "issuer_did": "did:web:indras-net.prajapati-maricha.replication-authority",
+        "issuer_verification_method": "did:web:indras-net.prajapati-maricha.replication-authority#quorum-key"
+      },
+      "holder": {
+        "subject_did": "did:web:indras-net.agent.prajapati-maricha-root",
+        "spiffe_binding": {
+          "spiffe_id": "spiffe://indras-net.local/agent/prajapati-maricha/root",
+          "trust_domain": "indras-net.local",
+          "svid_cnf_thumbprint": "c3Bhd25ob2xkZXJzdmlka2V5dGh1bWJwcmludDAwMQ"
+        }
+      },
+      "authority_block": {
+        "facts": [
+          {
+            "predicate": "may_spawn",
+            "terms": [
+              "lineage:indras-net:prajapati:root"
+            ]
+          }
+        ],
+        "max_risk_class": "C"
+      },
+      "attenuation_blocks": [],
+      "caveats": [
+        {
+          "kind": "generation_cap",
+          "rule": "check if request_generation($g), $g < 8"
+        },
+        {
+          "kind": "r_eff_ceiling",
+          "rule": "check if lineage_r_eff($x), $x < 1.0"
+        }
+      ],
+      "replication_caveats": {
+        "lineage_id": "lineage:indras-net:prajapati:root",
+        "parent_did": "did:web:indras-net.agent.prajapati-maricha-root",
+        "child_genome_cid": "bafkreigenomeofchildreplicaplaceholderxxxxxxxxxxxxxxxx",
+        "floor_hash": "0x9a3f00bb22cc44dd66ee88ff00112233445566778899aabbccddeeff00112233",
+        "r_eff_ceiling": 0.95,
+        "r_eff_debit": 0.5,
+        "population_debit": 1,
+        "budget_epoch": 42,
+        "generation": 3,
+        "generation_cap": 8,
+        "lease": {
+          "vitamin_kid": "vitamin:indras-net:tier-high:kid-7733",
+          "lease_ttl": "PT3M",
+          "renew_endpoint": "https://governance.indras-net.local/lease/renew",
+          "spawn_cap_unlock_age": "PT10M"
+        },
+        "compute_quota": {
+          "cpu": "2000m",
+          "mem": "4Gi",
+          "egress_bytes": 1048576,
+          "wallclock": "PT6H"
+        },
+        "tcb_attestation_ref": "urn:epimystic:indras-net:tcb-attest:firecracker:aa11bb22",
+        "quorum_cosigs": [
+          {
+            "cosigner_did": "did:web:indras-net.governance.shard-1",
+            "signature": "Y29zaWcx",
+            "is_external_anchor": false
+          },
+          {
+            "cosigner_did": "did:web:external-anchor.commons.witness",
+            "signature": "Y29zaWcy",
+            "is_external_anchor": true
+          }
+        ],
+        "human_gate_ref": "audit:2026-06-23:human-gate:0x44ee",
+        "boot_window": "PT2M"
+      },
+      "time_window": {
+        "not_before": "2026-06-23T09:00:00Z",
+        "not_after": "2026-06-23T09:30:00Z"
+      },
+      "revocation": {
+        "status_list_credential": "urn:epimystic:indras-net:statuslist:spawn:2026q2",
+        "status_list_index": 77
+      },
+      "detached_signatures": [
+        {
+          "alg": "EdDSA",
+          "kid": "did:web:indras-net.prajapati-maricha.replication-authority#quorum-key",
+          "signature": "c3Bhd25zaWduYXR1cmVwbGFjZWhvbGRlcjAwMQ",
+          "format": "JWS"
+        }
+      ],
+      "vendor_substitution_note": "Biscuit caveat algebra + SPIFFE/SVID (SPIRE). Replication-Authority quorum self-hosted; external anchor is an independent commons witness, not a vendor service."
+    }
+  ]
+}

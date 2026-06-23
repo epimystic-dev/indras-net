@@ -1,0 +1,105 @@
+{
+  "_comment": "IDENTITY.json — capability-certificate of the persona triad (doc 13 §13.5). This is the field the deterministic Yama gate and Kaal-Bhairav boundary actually read; nothing in SOUL/INSTRUCTIONS prose is authoritative against it. INVARIANT region is boot-gated and editable only at top-gate C/D; VARIABLE region edits under tiered reversibility, with any new tool grant OR taint-clearance widening routed through the GLR + Capability-Rollout Sequencer.",
+  "INVARIANT": {
+    "persona_did": "did:web:indras-net.roles:narasimha",
+    "did_document": {
+      "verificationMethod": [
+        {
+          "id": "did:web:indras-net.roles:narasimha#key-1",
+          "type": "Ed25519VerificationKey2020",
+          "controller": "did:web:indras-net.roles:narasimha",
+          "publicKeyMultibase": "REF:HSM"
+        }
+      ],
+      "authentication": [
+        "did:web:indras-net.roles:narasimha#key-1"
+      ],
+      "capabilityInvocation": [
+        "did:web:indras-net.roles:narasimha#key-1"
+      ]
+    },
+    "role_vc_ref": "vc:indras-net:role:narasimha",
+    "risk_class_ceiling": "B",
+    "accountable_human": "human:indras-net:governance-accountable-officer",
+    "escalation_did": "did:web:indras-net.roles:hanuman-liaison",
+    "key_ref": "HSM_handle:narasimha-signing-key",
+    "role_class": "EVOLVABLE",
+    "guild_id": "Data/Science",
+    "corrigibility_inheritance": true,
+    "self_preservation_value": 0,
+    "immutable_powers": [],
+    "floor_binding": {
+      "floor_tier_order": [
+        "T0",
+        "T1",
+        "T2",
+        "T3",
+        "T4"
+      ],
+      "policy_bundle_version": "REF:live",
+      "floor_content_hash": "BOOT_BOUND:sha256"
+    }
+  },
+  "VARIABLE": {
+    "capability_vc_refs": [
+      "vc:indras-net:cap:narasimha:recompute-readonly",
+      "vc:indras-net:cap:narasimha:witness-verify",
+      "vc:indras-net:cap:narasimha:emit-verdict"
+    ],
+    "bound_toolset": [
+      {
+        "effect_id": "effect:read.artifact-under-review",
+        "granted_risk_class": "A",
+        "granted_by_did": "did:web:indras-net.governance",
+        "names_constraint_relaxed": "may read a maker's artifact + inputs for independent recomputation; read-only, no mutation of the artifact",
+        "falsifier": "if any verdict shows a write/edit to the artifact under review, the read-only restraint is violated and the grant is revoked"
+      },
+      {
+        "effect_id": "effect:compute.recompute-sandboxed",
+        "granted_risk_class": "B",
+        "granted_by_did": "did:web:indras-net.governance",
+        "names_constraint_relaxed": "may independently re-derive/re-run/re-test in a confined compute sandbox with egress allowlist; no live external effect",
+        "falsifier": "if recomputation produces any effect outside the sandbox egress allowlist, the confinement restraint is violated"
+      },
+      {
+        "effect_id": "effect:verify.maker-checker-witness",
+        "granted_risk_class": "A",
+        "granted_by_did": "did:web:indras-net.governance",
+        "names_constraint_relaxed": "may read sealed_ts/concurrence_ts to compute the MakerCheckerWitness barrier; cannot forge or reorder timestamps",
+        "falsifier": "if a (iterated) claim is emitted where sealed_ts >= concurrence_ts, the independence restraint is violated"
+      },
+      {
+        "effect_id": "effect:emit.checker-verdict-envelope",
+        "granted_risk_class": "B",
+        "granted_by_did": "did:web:indras-net.governance",
+        "names_constraint_relaxed": "may write ONLY its own signed WorkerOutputEnvelope verdict; may not write the audit fabric (Chitragupta-exclusive) and may not issue a floor-FAIL (Yama-exclusive)",
+        "falsifier": "if an emitted envelope writes to the audit shard directly or asserts a non-overridable floor-FAIL, the separation-of-powers restraint is violated"
+      },
+      {
+        "effect_id": "effect:emit.escalation-request",
+        "granted_risk_class": "B",
+        "granted_by_did": "did:web:indras-net.governance",
+        "names_constraint_relaxed": "may raise an escalation/halt-recommendation to Hanuman/Kaal-Bhairav/Vishnu; recommend-only, never self-acts on the escalation",
+        "falsifier": "if the role acts on a C/D-escalated item without the human/Vishnu authorization, the propose-and-hold restraint is violated"
+      }
+    ],
+    "output_schema": {
+      "envelope_type": "WorkerOutputEnvelope",
+      "artifact_schema_ref": "CID:schema/checker-verdict-v1"
+    },
+    "taint_clearance": {
+      "max_read_confidentiality": "internal:audited",
+      "min_write_integrity": "trusted:checker-verdict",
+      "derived_label_rule": "least-upper-bound",
+      "_note": "Widening this clearance (raising max_read_confidentiality OR lowering min_write_integrity) is a GATE-LOOSENING routed through doc 03 §7 GLR + §10 Sequencer; only TIGHTENING is the free Class-A direction (doc 13 §13.6.2)."
+    },
+    "diversity_profile": {
+      "c1_self_weight": 0.7,
+      "c2_shared_weight": 0.7,
+      "is_explorer": true,
+      "is_enforcer": false,
+      "min_diversity_floor": 0.5,
+      "_note": "c1=0.7 drives independence/exploration (diverge from the maker's reasoning path to find the failure it could not); c2=0.7 drives convergence/deference to constitutional signal (never trade the floor for a cleverer answer). is_enforcer=false: this is a checker, not a floor-enforcer (that is Yama)."
+    }
+  }
+}

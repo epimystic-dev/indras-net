@@ -1,0 +1,49 @@
+# Default .gitignore for every epimystic-dev public repo.
+# Errs on the side of NEVER committing secrets/build junk. Add language-specific
+# entries per repo, but do not remove these.
+
+# --- secrets / credentials (never commit) ---
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.pfx
+*.p12
+*.keystore
+*.jks
+*.ppk
+id_rsa
+id_ed25519
+id_dsa
+local.properties
+secrets.json
+credentials
+.npmrc
+.pypirc
+hosts.yml
+wrangler.toml
+.dev.vars
+**/.wrangler/
+**/wrangler/pages.json
+
+# --- dependencies / build output ---
+node_modules/
+dist/
+build/
+.astro/
+.next/
+.cache/
+__pycache__/
+*.pyc
+.venv/
+venv/
+env/
+
+# --- editor / os ---
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.log

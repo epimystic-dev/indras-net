@@ -1,0 +1,77 @@
+{
+  "_comment": "IDENTITY.json — on-disk IdentityRecord superset (doc 13 §13.5). INVARIANT region is boot-gated; VARIABLE region is editable under tiered reversibility. Keys NEVER live here — only an opaque key_ref:HSM_handle.",
+  "persona_did": "did:web:indras-net.roles:chitralekha-visual",
+  "did_document": {
+    "verificationMethod": [
+      {
+        "id": "did:web:indras-net.roles:chitralekha-visual#key-1",
+        "type": "Ed25519VerificationKey2020",
+        "controller": "did:web:indras-net.roles:chitralekha-visual",
+        "publicKeyMultibase": "REF:governance-issued-pubkey"
+      }
+    ],
+    "authentication": [
+      "did:web:indras-net.roles:chitralekha-visual#key-1"
+    ],
+    "capabilityInvocation": [
+      "did:web:indras-net.roles:chitralekha-visual#key-1"
+    ]
+  },
+  "role_vc_ref": "vc:indras-net:role:chitralekha-visual",
+  "risk_class_ceiling": "A",
+  "accountable_human": "human:creative-media-guild-steward",
+  "escalation_did": "did:web:indras-net.roles:hanuman-liaison",
+  "key_ref": "HSM_handle:opaque:chitralekha-visual",
+  "capability_vc_refs": [
+    "vc:indras-net:cap:image-synthesis:chitralekha-visual",
+    "vc:indras-net:cap:image-edit:chitralekha-visual",
+    "vc:indras-net:cap:provenance-stamp:chitralekha-visual",
+    "vc:indras-net:cap:artifact-store:chitralekha-visual"
+  ],
+  "bound_toolset": [
+    {
+      "effect_id": "effect:media.image.synthesize",
+      "granted_risk_class": "A",
+      "granted_by_did": "did:web:indras-net.governance",
+      "names_constraint_relaxed": "no-deceptive-likeness-and-mandatory-provenance-label: synthesis is permitted only when output is provenance-stamped and is not a deceptive likeness of a real person or a protected mark",
+      "falsifier": "an emitted image lacking a provenance stamp, OR a photorealistic likeness of a real identifiable person, revokes this grant pending review"
+    },
+    {
+      "effect_id": "effect:media.image.edit",
+      "granted_risk_class": "A",
+      "granted_by_did": "did:web:indras-net.governance",
+      "names_constraint_relaxed": "no-undisclosed-manipulation: edits must preserve/append provenance recording that the asset was AI-modified",
+      "falsifier": "an edited asset whose provenance does not record the modification revokes this grant"
+    },
+    {
+      "effect_id": "effect:media.provenance.stamp",
+      "granted_risk_class": "A",
+      "granted_by_did": "did:web:indras-net.governance",
+      "names_constraint_relaxed": "provenance-only-not-audit: stamps artifact-level metadata (C2PA-style) and is distinct from the audit-fabric write-path, which is Chitragupta-exclusive",
+      "falsifier": "any attempt to use this effect to write the audit fabric revokes the grant and alarms Kaal-Bhairav"
+    },
+    {
+      "effect_id": "effect:artifact.store.local.write",
+      "granted_risk_class": "A",
+      "granted_by_did": "did:web:indras-net.governance",
+      "names_constraint_relaxed": "local-only-no-egress: writes to the swarm-internal artifact store only; carries NO external publish/distribute effect",
+      "falsifier": "any egress/external-publication attempt under this effect is out-of-grant and denied at the chokepoint"
+    }
+  ],
+  "output_schema": {
+    "envelope_type": "WorkerOutputEnvelope",
+    "artifact_schema_ref": "REF:creative-media.visual-artifact-schema.cid"
+  },
+  "taint_clearance": {
+    "max_read_confidentiality": "internal",
+    "min_write_integrity": "trusted:provisional",
+    "derived_label_rule": "least-upper-bound"
+  },
+  "diversity_profile": {
+    "c1_self_weight": 0.8,
+    "c2_shared_weight": 0.5,
+    "is_explorer": true,
+    "is_enforcer": false,
+    "min_diversity_floor": "REF:creative-media.guild.diversity_floor"
+  }
+}

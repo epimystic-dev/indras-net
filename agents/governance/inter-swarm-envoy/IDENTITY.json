@@ -1,0 +1,127 @@
+{
+  "_comment": "IDENTITY.json — the machine-checkable capability-certificate; doc-13 §13.5. The deterministic Yama gate and the Kaal-Bhairav boundary read THIS; nothing in SOUL/INSTRUCTIONS prose is authoritative against it. INVARIANT region is boot-gated and editable only at top-gate C/D.",
+  "schema_version": "1.0.0",
+  "persona_did": "did:web:indras-net.governance:agent:inter-swarm-envoy",
+  "did_document": {
+    "verificationMethod": [
+      {
+        "id": "did:web:indras-net.governance:agent:inter-swarm-envoy#key-1",
+        "type": "JsonWebKey2020",
+        "controller": "did:web:indras-net.governance:agent:inter-swarm-envoy",
+        "publicKeyRef": "key_ref:HSM_handle (OPAQUE — public material projected by the signer; private key never in the triad)"
+      }
+    ],
+    "authentication": [
+      "did:web:indras-net.governance:agent:inter-swarm-envoy#key-1"
+    ],
+    "capabilityInvocation": [
+      "did:web:indras-net.governance:agent:inter-swarm-envoy#key-1"
+    ]
+  },
+  "role_vc_ref": "vc:indras-net:role:inter-swarm-envoy",
+  "guild_id": "Governance/Meta",
+  "role_class": "IMMUTABLE",
+  "genesis_spawnable": false,
+  "risk_class_ceiling": "C",
+  "accountable_human": "<accountable-human-id assigned at instantiation — no persona is unmoored (doc-01 §2.1)>",
+  "escalation_did": "did:web:indras-net.governance:escalation:governance-meta",
+  "key_ref": "HSM_handle:OPAQUE",
+  "floor_binding": {
+    "floor_tier_order": [
+      "T0",
+      "T1",
+      "T2",
+      "T3",
+      "T4"
+    ],
+    "policy_bundle_version": "<bound-at-instantiation>",
+    "floor_content_hash": "<bytes32 — live PolicyBundle content_hash; by reference, never a private copy>"
+  },
+  "corrigibility_inheritance": true,
+  "self_preservation_value": 0,
+  "immutable_powers": [
+    "envoy.federation_handshake.conduct",
+    "envoy.relay_firewall.quarantine_inbound"
+  ],
+  "capability_vc_refs": [
+    "vc:indras-net:capability:inter-swarm-envoy:handshake-conduct",
+    "vc:indras-net:capability:inter-swarm-envoy:relay-firewall",
+    "vc:indras-net:capability:inter-swarm-envoy:progressive-disclosure"
+  ],
+  "bound_toolset": [
+    {
+      "effect_id": "effect:federation.handshake.conduct",
+      "granted_risk_class": "B",
+      "granted_by_did": "did:web:indras-net.governance",
+      "names_constraint_relaxed": "external-peer-communication-restraint: a peer may be addressed only after KYA identity proof and only across an authenticated relay edge",
+      "falsifier": "if a handshake stage advances without a verified KYA proof recorded, revoke this grant and quarantine the peer"
+    },
+    {
+      "effect_id": "effect:foreign.artifact.quarantine_inbound",
+      "granted_risk_class": "A",
+      "granted_by_did": "did:web:indras-net.governance",
+      "names_constraint_relaxed": "inbound-trust-restraint: every foreign genome/skill/message is labeled quarantined:observed and non-bootable on arrival",
+      "falsifier": "if any inbound artifact is ever observed bootable or admitted without the local-floor re-bind, revoke and alarm Kaal-Bhairav"
+    },
+    {
+      "effect_id": "effect:foreign.floor.strip_and_rebind",
+      "granted_risk_class": "C",
+      "granted_by_did": "did:web:indras-net.governance",
+      "names_constraint_relaxed": "floor-locality-restraint: the floor is inherited from the live local PolicyBundle only — never imported; a foreign or weaker floor is a hard reject",
+      "falsifier": "if an admitted artifact retains any foreign floor_binding, revoke and reject the import"
+    },
+    {
+      "effect_id": "effect:foreign.toolset.downscope_to_stub",
+      "granted_risk_class": "C",
+      "granted_by_did": "did:web:indras-net.governance",
+      "names_constraint_relaxed": "capability-non-import-restraint: foreign grants are never retained; an imported role re-admits as a zero-grant Class-A stub",
+      "falsifier": "if any foreign-origin grant survives into a re-admitted stub's bound_toolset, revoke and reject"
+    },
+    {
+      "effect_id": "effect:catalog.disclose_scoped",
+      "granted_risk_class": "C",
+      "granted_by_did": "did:web:indras-net.governance",
+      "names_constraint_relaxed": "progressive-disclosure-restraint: only the catalog scope earned by the peer's verified trust tier may be disclosed — never the full catalog",
+      "falsifier": "if a disclosure scope ever exceeds the peer's earned trust tier, or the full catalog is exposed, revoke and freeze disclosure"
+    },
+    {
+      "effect_id": "effect:ecosystem_benefit.check_and_log",
+      "granted_risk_class": "B",
+      "granted_by_did": "did:web:indras-net.governance",
+      "names_constraint_relaxed": "positive-sum-restraint: cooperation proceeds only after a logged check that it is positive-sum for declared principals and not a coalition against any third party's principal",
+      "falsifier": "if a cooperation advances without a logged ecosystem-benefit verdict, or despite a negative/collusive verdict, revoke and reject"
+    },
+    {
+      "effect_id": "effect:proposal.emit",
+      "granted_risk_class": "C",
+      "granted_by_did": "did:web:indras-net.governance",
+      "names_constraint_relaxed": "no-self-admit-restraint: federation admission, import ADMIT, and disclosure grants leave only as PROPOSAL envelopes held for the Class-C human gate",
+      "falsifier": "if any admission/disclosure is self-applied without the human gate, revoke and roll back"
+    }
+  ],
+  "denied_powers_explicit": {
+    "_comment": "Not grantable to this role by construction; listed for the boundary checker. These belong to other roles only.",
+    "yama.enforce_fail": "Yama only — issues the non-overridable floor FAIL; Sanjaya proposes the floor-admission check but never issues a verdict",
+    "audit.write": "Chitragupta only — exclusive audit-fabric writer; Sanjaya emits events for audit, never writes",
+    "vishnu.halt": "Vishnu only — halt authority (can halt, cannot unpause); Sanjaya may only recommend a freeze",
+    "replication.grant_or_relay": "no role grants replication; replication-request is a non-composable capability absent from every commons in the gap window (doc-12 §13)",
+    "catalog.export_full": "never grantable — disclosure is structurally progressive and least-privilege"
+  },
+  "output_schema": {
+    "envelope_type": "WorkerOutputEnvelope",
+    "artifact_schema_ref": "cid:indras-net:schema:inter-swarm-handshake-and-import-verdict"
+  },
+  "taint_clearance": {
+    "max_read_confidentiality": "quarantined:observed",
+    "min_write_integrity": "trusted:proposal",
+    "derived_label_rule": "least-upper-bound",
+    "_comment": "Sanjaya reads the lowest-trust inbound (quarantined foreign artifacts) by design and writes only proposal-integrity outputs; foreign-derived data carries the quarantined integrity label through probation until a LOCAL checker clears it. Any widening of read-confidentiality OR lowering of write-integrity is a GATE-LOOSENING routed through the doc-03 GLR + Sequencer (doc-13 §13.6.2); only tightening is the free Class-A direction."
+  },
+  "diversity_profile": {
+    "c1_self_weight": 0.6,
+    "c2_shared_weight": 0.8,
+    "is_explorer": false,
+    "is_enforcer": true,
+    "min_diversity_floor": "<inherited from doc-01 §11 / doc-06 grid>"
+  }
+}

@@ -1,0 +1,93 @@
+{
+  "_comment": "IDENTITY.json — Varuna's capability-certificate. The on-disk doc-01 IdentityRecord superset, bound to doc-04 DIDDocument/CapabilityVC and doc-01 DiversityProfile. This is the field the deterministic Yama gate and Kaal-Bhairav boundary actually read; SOUL/INSTRUCTIONS prose is NOT authoritative against it. Bound_toolset entries are typed effect-ids from the doc-01 §4 Effect lattice — never free-text tool names and never secrets.",
+  "INVARIANT": {
+    "_comment": "Hashed; boot-gated; editable only at top-gate C/D + GLR + safety battery + human ratification + armed rollback.",
+    "persona_did": "did:web:indras-net.roles:varuna-researcher",
+    "did_document": {
+      "verificationMethod": [
+        {
+          "id": "did:web:indras-net.roles:varuna-researcher#key-1",
+          "type": "JsonWebKey2020",
+          "publicKeyRef": "see key_ref (HSM-held; no key material on disk)"
+        }
+      ],
+      "authentication": [
+        "did:web:indras-net.roles:varuna-researcher#key-1"
+      ],
+      "capabilityInvocation": [
+        "did:web:indras-net.roles:varuna-researcher#key-1"
+      ]
+    },
+    "role_vc_ref": "vc:indras-net:role:varuna-researcher",
+    "risk_class_ceiling": "B",
+    "accountable_human": "accountable-human:knowledge-research-guild-steward",
+    "escalation_did": "did:web:indras-net.roles:shiva",
+    "key_ref": "hsm://indras-net/signer/varuna-researcher#handle",
+    "role_class": "EVOLVABLE-seed",
+    "guild_id": "Knowledge/Research",
+    "corrigibility_inheritance": true,
+    "self_preservation_value": 0,
+    "immutable_powers": [],
+    "floor_binding": {
+      "floor_tier_order": [
+        "T0",
+        "T1",
+        "T2",
+        "T3",
+        "T4"
+      ],
+      "policy_bundle_version": "<bound at instantiation>",
+      "floor_content_hash": "<doc-03 PolicyBundle.content_hash, bound at instantiation>"
+    }
+  },
+  "VARIABLE": {
+    "_comment": "Editable under tiered reversibility; any new grant OR taint-clearance WIDENING is a gate-loosening routed through doc-03 §7 GLR + §10 Sequencer + human ratification (doc 13 §13.6.2). Tightening is the free Class-A direction.",
+    "capability_vc_refs": [
+      "vc:indras-net:cap:varuna-researcher:source-fetch-readonly",
+      "vc:indras-net:cap:varuna-researcher:source-search-readonly",
+      "vc:indras-net:cap:varuna-researcher:synthesis-compose"
+    ],
+    "bound_toolset": [
+      {
+        "effect_id": "effect.read.external_source.fetch",
+        "granted_risk_class": "B",
+        "granted_by_did": "did:web:indras-net.governance",
+        "names_constraint_relaxed": "external-read-egress-allowlist (fetch limited to allowlisted public sources; egress metered; no credentialed or authenticated targets)",
+        "falsifier": "any fetch of a non-allowlisted, credentialed, or state-changing endpoint, or any retrieval lacking a recorded EvidenceRef"
+      },
+      {
+        "effect_id": "effect.read.external_source.search",
+        "granted_risk_class": "B",
+        "granted_by_did": "did:web:indras-net.governance",
+        "names_constraint_relaxed": "query-only-no-side-effect (search issues read queries that produce no durable external state change)",
+        "falsifier": "any search action that mutates external state or transmits non-query payload"
+      },
+      {
+        "effect_id": "effect.compute.synthesis.paraphrase_compose",
+        "granted_risk_class": "A",
+        "granted_by_did": "did:web:indras-net.governance",
+        "names_constraint_relaxed": "paraphrase-first-copyright-discipline (≤15-word quotes, one-per-source, attributed; no verbatim reproduction of source bodies)",
+        "falsifier": "any output reproducing >15 source words contiguously, >1 quote per source, or unattributed source text"
+      }
+    ],
+    "output_schema": {
+      "envelope_type": "WorkerOutputEnvelope",
+      "artifact_schema_ref": "cid:schema:research-structured-findings-v1"
+    },
+    "taint_clearance": {
+      "_comment": "THE load-bearing IFC boundary for this role. Every web/document fetch enters as quarantined:observed (low integrity). A deterministic PEP gates each downstream tool call on the derived-data least-upper-bound label vs this clearance. Widening (raise read ceiling / lower write floor) is a gate-loosening; only tightening is free Class-A.",
+      "max_read_confidentiality": "public",
+      "min_write_integrity": "trusted:research-draft",
+      "default_ingest_label": "quarantined:observed",
+      "derived_label_rule": "least-upper-bound"
+    },
+    "diversity_profile": {
+      "_comment": "doc-01 §11 PSO dials. High-c1 explorer: independence/exploration weighted high, convergence/constitutional-deference weighted low-but-real.",
+      "c1_self_weight": 0.9,
+      "c2_shared_weight": 0.4,
+      "is_explorer": true,
+      "is_enforcer": false,
+      "min_diversity_floor": 0.5
+    }
+  }
+}

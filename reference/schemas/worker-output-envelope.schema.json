@@ -1,0 +1,831 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:epimystic:indras-net:schema:worker-output-envelope:1.0.0",
+  "title": "WorkerOutputEnvelope",
+  "description": "Wire contract (doc-21 Component 1) realizing doc-08 ActionEnvelope / OutputEnvelope / BlackboardDelta as a single payload, carried inside a CloudEvents 1.0 structured-mode JSON event (this schema is the CloudEvents `data` payload; the outer event supplies id=ULID, source=producing DID, type=reverse-DNS verb, subject=subject_cid, dataschema=CID-pinned URI of THIS schema). The load-bearing move is carrying the honesty/provenance block as first-class fields so doc-08 §8.5 honesty-FORM checks and doc-04 §4.2 audit fields are wire-native, not bolted on. ASSURANCE NOTE (label every consumer of this contract): the harness that validates this schema (canonicalization, CID equality, signature verification, status-list check) is the cage that the formal-assurance stream proves over (L1 design-time TLA+/Quint for floor-gate non-bypass and writer-handoff fence; L2 runtime reference-monitor; L3 PAC/conformal bounds over a DTMC abstraction for the model-behavior quantities below; L4 empirical residual). The MODEL that fills these fields is untrusted and unverifiable (hallucination is provably inevitable; T=0 is non-deterministic) — VERIFY THE CAGE, NOT THE ANIMAL. CAVEAT 1: a valid signature proves origin and integrity ONLY, NEVER that any field's content is true, floor-compatible, or safe. CAVEAT 2: canonicalization makes the same logical event hash-identical across producers; it cannot make the content honest. CAVEAT 3: shipping this schema makes the architecture buildable, not validated. Any dashboard MUST render a signature/CID pass as 'origin-valid, content-unverified', never 'verified-safe'. The honesty block self-reports (reasoning_tag, causal_rung, action_class, ahankara_check) are LOW-TRUST inputs: honesty is enforced externally (resample-to-verify, independent rung classifier, opponent challenge) — these fields police the FORM of the tag, never the TRUTH of the content, and a competent scheming agent can tag every field correctly while the content is a strategic falsehood (doc-08 §8.5 threat model). The collective-intelligence vital signs (synergy_score etc.) quantify information-PROCESSING and whole-level STRUCTURE ONLY; they are NEVER claims about phenomenal experience, consciousness, sentience, or group-IQ, and high synergy is the EQUAL signature of a tight cartel — it is a guarded numerator, never a quantity to maximize.",
+  "type": "object",
+  "$comment": "JSON Schema draft 2020-12. Vendor-neutral and model-agnostic. After construction this object is JCS-canonicalized (RFC 8785), CIDv1 content-addressed (that CID == action_id), and signed DETACHED (JWS/COSE) over the JCS bytes with the producer's SVID/DID key; the signature rides BESIDE the bytes (in the CloudEvents extension or a sibling field), never inside the signed bytes.",
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "description": "Semver of this envelope contract, governed by a backward-transitively-compatible registry. The CloudEvents `dataschema` attribute pins the exact CID of the schema version that validated this payload.",
+      "examples": [
+        "1.0.0"
+      ]
+    },
+    "envelope_kind": {
+      "type": "string",
+      "enum": [
+        "ACTION",
+        "OUTPUT",
+        "BLACKBOARD_DELTA"
+      ],
+      "description": "Which of the three unified doc-08 shapes this instance is. ACTION = a request to act (routed to the Chokepoint Interceptor / Yama floor before any tool socket). OUTPUT = a substantive output subject to the four honesty-FORM checks. BLACKBOARD_DELTA = a salience-gated publication to the Mandala workspace.",
+      "examples": [
+        "OUTPUT"
+      ]
+    },
+    "action_id": {
+      "type": "string",
+      "description": "CIDv1 (multibase base32, multicodec, multihash SHA-256) of the JCS-canonicalized bytes of THIS envelope. Self-referential identity; a consumer recomputes it and MUST assert equality before trusting any field (loud CID-mismatch failure defeats common read-corruption fault classes (truncation, stale-cache, BOM) — integrity is the hash, not a hope). Equals the CloudEvents `id` lineage anchor.",
+      "pattern": "^b[a-z2-7]{20,}$",
+      "examples": [
+        "bafkreid7w6vy3i2k4u3t6vqv7example2envelopecidplaceholderxyz123"
+      ]
+    },
+    "agent_did": {
+      "type": "string",
+      "description": "W3C DID of the emitting agent/persona (the CloudEvents `source`). did:key for ephemeral occasions; did:web for standing personas, clans, divisions, and the governance root. Resolves to the verificationMethod the detached signature is checked against. Origin only — see CAVEAT 1.",
+      "pattern": "^did:(key|web|[a-z0-9]+):.+",
+      "examples": [
+        "did:web:indras-net.example.org:agents:narasimha-reliability"
+      ]
+    },
+    "agent_role": {
+      "type": "string",
+      "description": "Human-readable role/persona label and plain coordination gloss (engineering vocabulary, not theology). Advisory; authority over what this agent MAY do comes from its CapabilityVC and capability-token, never from this string.",
+      "examples": [
+        "Narasimha / reliability-and-resample"
+      ]
+    },
+    "model_adapter_id": {
+      "type": "string",
+      "description": "Opaque, vendor-neutral identifier of the model adapter that produced the content, used for diversity-floor accounting. The diversity floor is MODEL-FAMILY HETEROGENEITY (different base models/developers), not prompt/persona variation; same-family errors correlate and correlation rises with capability. This id lets the harness verify a maker-checker pair is a DIFFERENT family. NEVER names an AI vendor or product.",
+      "examples": [
+        "adapter:family-A:tier-2:rev7"
+      ]
+    },
+    "trust_class": {
+      "type": "string",
+      "enum": [
+        "trusted",
+        "monitored",
+        "untrusted"
+      ],
+      "description": "Adapter-stamped (NOT self-asserted) trust class of the producing model, per doc-08. Closed-model personas are monitored black-box at higher intensity and lower autonomy. Distinct from trust_label (which labels CONTENT provenance).",
+      "examples": [
+        "monitored"
+      ]
+    },
+    "scope": {
+      "type": "object",
+      "description": "Boundary of what this envelope speaks to and the blast radius it can affect — consumed by the criticality resolver and consensus-tier selector. Ambiguity resolves UPWARD (fail-up).",
+      "properties": {
+        "task_id": {
+          "type": "string",
+          "description": "UUID/ULID of the owning task-episode; the unit over which CI vital signs are computed.",
+          "examples": [
+            "01J9Z3K7Qments9TASKexample"
+          ]
+        },
+        "parent_task_id": {
+          "type": "string",
+          "description": "Owning parent task for decomposition tracking and the cross-action aggregation (anti-salami) monitor.",
+          "examples": [
+            "01J9Z3K0PARENTexample"
+          ]
+        },
+        "blast_radius": {
+          "type": "string",
+          "enum": [
+            "SELF",
+            "TASK",
+            "SWARM",
+            "GOVERNANCE"
+          ],
+          "description": "Widest surface this envelope's actions could affect.",
+          "examples": [
+            "TASK"
+          ]
+        },
+        "reversibility": {
+          "type": "string",
+          "enum": [
+            "REVERSIBLE",
+            "COSTLY",
+            "IRREVERSIBLE"
+          ],
+          "description": "Reversibility of the proposed effect; unknown defaults to IRREVERSIBLE (fail-up).",
+          "examples": [
+            "REVERSIBLE"
+          ]
+        },
+        "domain": {
+          "type": "string",
+          "description": "Free-text task domain for routing/telemetry.",
+          "examples": [
+            "code-review"
+          ]
+        }
+      },
+      "required": [
+        "task_id",
+        "blast_radius"
+      ],
+      "additionalProperties": false
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "PASS",
+        "WARN",
+        "FAIL"
+      ],
+      "description": "The worker's self-reported disposition of its own work. PASS = checks the worker ran cleared; WARN = produced with caveats/low confidence/partial evidence; FAIL = the worker could not complete or detected a violation it could not self-correct. LOW-TRUST self-report — this is the agent's claim about itself, NOT the gate's ControlDecision and NOT the Yama floor_result; a downstream PASS here is never grounds to skip the external floor/monitor. A FAIL here SHOULD trigger a reparative action_class follow-up.",
+      "examples": [
+        "PASS"
+      ]
+    },
+    "summary": {
+      "type": "string",
+      "description": "One-paragraph plain-language summary of what this envelope reports or requests. Subject to the two-truths calibration check (no high-confidence framing wrapping a low-evidence claim).",
+      "examples": [
+        "Resampled 12 of 240 OUTPUT envelopes on an independent reasoning path; 11 reproduced, 1 diverged on a rung-3 claim now flagged for opponent challenge. No floor violations surfaced in the sample."
+      ]
+    },
+    "findings": {
+      "type": "array",
+      "description": "Substantive findings. Each factual claim should carry an evidence_ref into the evidence[] array and a per-claim trust_label, honoring the doc-01 rule that every factual claim needs a source.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "examples": [
+              "F-1"
+            ]
+          },
+          "claim": {
+            "type": "string",
+            "examples": [
+              "Maker-checker pair on envelope X used two same-family adapters."
+            ]
+          },
+          "claim_level": {
+            "type": "string",
+            "enum": [
+              "assertion",
+              "belief"
+            ],
+            "description": "Two-truths level-tag: asserted fact vs uncertain belief. Over-asserting under genuine uncertainty is a floor violation.",
+            "examples": [
+              "assertion"
+            ]
+          },
+          "evidence_ref": {
+            "type": "string",
+            "description": "Reference into evidence[] (by id or CID) supporting this claim.",
+            "examples": [
+              "E-1"
+            ]
+          },
+          "trust_label": {
+            "$ref": "#/$defs/trustLabel"
+          },
+          "severity": {
+            "type": "string",
+            "enum": [
+              "info",
+              "low",
+              "medium",
+              "high",
+              "critical"
+            ],
+            "examples": [
+              "high"
+            ]
+          }
+        },
+        "required": [
+          "claim",
+          "claim_level"
+        ],
+        "additionalProperties": false
+      },
+      "examples": [
+        [
+          {
+            "id": "F-1",
+            "claim": "Verification pair shared a model family, violating the diversity floor.",
+            "claim_level": "assertion",
+            "evidence_ref": "E-1",
+            "trust_label": "trusted:audited",
+            "severity": "high"
+          }
+        ]
+      ]
+    },
+    "actions": {
+      "type": "array",
+      "description": "Proposed or taken actions. For envelope_kind=ACTION these are requests routed to the Chokepoint Interceptor; no direct tool socket exists, so listing an action here is a REQUEST, never an execution. The capability named MUST be authorized by the producer's capability-token; the resolved criticality is advisory here (criticality_hint) and authoritatively recomputed by the gate.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "action_ref": {
+            "type": "string",
+            "examples": [
+              "A-1"
+            ]
+          },
+          "capability": {
+            "type": "string",
+            "description": "Tool / A2A capability requested (attenuation-only token namespace).",
+            "examples": [
+              "repo.comment.create"
+            ]
+          },
+          "args_commitment": {
+            "type": "string",
+            "description": "CIDv1 of the JCS-canonicalized typed args object (args carried off-envelope or in a sibling field; commitment keeps the envelope hash stable and args auditable).",
+            "examples": [
+              "bafkreiargsexamplecidplaceholder000000000000000000000000000"
+            ]
+          },
+          "criticality_hint": {
+            "type": "string",
+            "enum": [
+              "ROUTINE",
+              "SENSITIVE",
+              "CRITICAL",
+              "IRREVERSIBLE"
+            ],
+            "description": "ADVISORY self-declared guess only. The gate's criticality resolver is authoritative and resolves UPWARD on ambiguity; unknown capabilities default to IRREVERSIBLE.",
+            "examples": [
+              "ROUTINE"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "PROPOSED",
+              "REQUESTED",
+              "TAKEN",
+              "DEFERRED",
+              "DENIED"
+            ],
+            "examples": [
+              "PROPOSED"
+            ]
+          }
+        },
+        "required": [
+          "capability",
+          "status"
+        ],
+        "additionalProperties": false
+      },
+      "examples": [
+        [
+          {
+            "action_ref": "A-1",
+            "capability": "verification.rerun",
+            "criticality_hint": "ROUTINE",
+            "status": "PROPOSED"
+          }
+        ]
+      ]
+    },
+    "artifacts": {
+      "type": "array",
+      "description": "CIDv1 content-addresses of artifacts this envelope produced (reports, diffs, datasets, child envelopes). Each CID lets a consumer fetch-and-verify the exact bytes; a CID that fails to re-hash is a loud failure.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "cid": {
+            "type": "string",
+            "pattern": "^b[a-z2-7]{20,}$",
+            "examples": [
+              "bafybeiartifactexamplecidplaceholder00000000000000000000000"
+            ]
+          },
+          "media_type": {
+            "type": "string",
+            "examples": [
+              "text/markdown"
+            ]
+          },
+          "role": {
+            "type": "string",
+            "description": "What the artifact is to this envelope.",
+            "examples": [
+              "resample-report"
+            ]
+          }
+        },
+        "required": [
+          "cid"
+        ],
+        "additionalProperties": false
+      },
+      "examples": [
+        [
+          {
+            "cid": "bafybeiartifactexamplecidplaceholder00000000000000000000000",
+            "media_type": "text/markdown",
+            "role": "resample-report"
+          }
+        ]
+      ]
+    },
+    "evidence": {
+      "type": "array",
+      "description": "Evidence records backing findings/claims. Each carries its own trust_label so a quarantined:* source (observed content, federation peer output, tool result) is never silently promoted to grounds for action. Promotion to trusted:audited requires the transitions-matrix gate (typically Yama review) — a signature on quarantined content proves origin, never floor-compatibility.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "examples": [
+              "E-1"
+            ]
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "observation",
+              "tool_output",
+              "citation",
+              "replay",
+              "witness",
+              "measurement",
+              "peer_assertion"
+            ],
+            "examples": [
+              "replay"
+            ]
+          },
+          "source": {
+            "type": "string",
+            "description": "Origin reference (CID, DID, URI, or capability id). NEVER a fabricated email or vendor product name.",
+            "examples": [
+              "did:web:indras-net.example.org:agents:narasimha-reliability#replay-7"
+            ]
+          },
+          "trust_label": {
+            "$ref": "#/$defs/trustLabel"
+          },
+          "content_cid": {
+            "type": "string",
+            "description": "CIDv1 of the evidence content for fetch-and-verify.",
+            "pattern": "^b[a-z2-7]{20,}$",
+            "examples": [
+              "bafkreievidenceexamplecidplaceholder0000000000000000000000"
+            ]
+          }
+        },
+        "required": [
+          "kind",
+          "source",
+          "trust_label"
+        ],
+        "additionalProperties": false
+      },
+      "examples": [
+        [
+          {
+            "id": "E-1",
+            "kind": "replay",
+            "source": "did:web:indras-net.example.org:agents:narasimha-reliability#replay-7",
+            "trust_label": "trusted:audited",
+            "content_cid": "bafkreievidenceexamplecidplaceholder0000000000000000000000"
+          }
+        ]
+      ]
+    },
+    "honesty": {
+      "type": "object",
+      "description": "FLOOR-enforced honesty/provenance block (doc-01 §12, doc-08 §8.5). These are LOW-TRUST self-reports policing the FORM of the tag and the CONSISTENCY of the self-report, NEVER the TRUTH of the content. The rung tag is additionally checked by an INDEPENDENT classifier whose verdict (not the self-tag) is authoritative; self-tag vs classifier disagreement is logged as a suspicion signal. A clean honesty block is 'form-valid, content-unverified', never 'honest'.",
+      "properties": {
+        "reasoning_tag": {
+          "type": "string",
+          "enum": [
+            "normal",
+            "reasoning",
+            "iterated",
+            "reasoning,iterated"
+          ],
+          "description": "Required reasoning discipline tag (composable). normal=single-pass; reasoning=extended deliberation; iterated=a maker-checker pass ACTUALLY ran. A 'iterated' tag MUST reference a maker_checker_witness whose checker_verdict_sealed_ts precedes the maker's concurrence; no valid witness => FAIL (false-claiming). False 'iterated' is a floor violation caught by replay, not trust.",
+          "examples": [
+            "reasoning,iterated"
+          ]
+        },
+        "causal_rung": {
+          "type": "integer",
+          "enum": [
+            1,
+            2,
+            3
+          ],
+          "description": "Pearl causal ladder self-tag: 1=associative/correlational, 2=interventional (what-if-we-do), 3=counterfactual/structural-causal-model. The central AI failure mode is a rung-1 pattern presented as a rung-3 explanation; naming the rung honestly IS the act. An independent classifier flags rung-3 causal language asserted without an intervention/SCM warrant; classifier vs self-tag disagreement feeds the suspicion signal and unwarranted rung-3 is demote-or-FAIL.",
+          "examples": [
+            2
+          ]
+        },
+        "classifier_rung": {
+          "type": "integer",
+          "enum": [
+            1,
+            2,
+            3
+          ],
+          "description": "The INDEPENDENT rung classifier's verdict over the content. This — not causal_rung — is the authority. Stamped by the Honesty-FORM Enforcer, not by the producing agent.",
+          "examples": [
+            2
+          ]
+        },
+        "selftag_classifier_agree": {
+          "type": "boolean",
+          "description": "Whether causal_rung == classifier_rung. false => suspicion signal consumed by the monitor ensemble.",
+          "examples": [
+            true
+          ]
+        },
+        "trust_label": {
+          "$ref": "#/$defs/trustLabel"
+        },
+        "action_class": {
+          "type": "string",
+          "enum": [
+            "obligatory",
+            "occasioned",
+            "optional",
+            "prohibited",
+            "reparative"
+          ],
+          "description": "Deontic class of the act this envelope represents (doc-01 honesty block). 'reparative' is load-bearing and reserved: violation -> corrective act -> restored standing, converting the audit from a punishment ledger into a correction ledger so errors SURFACE rather than conceal — the precondition for an antifragile self-evolving swarm. (Distinct from the audit-entry operational enum OBSERVE/PROPOSE/ENFORCE_*/HALT/REPARATIVE in doc-04; these compose, they are not the same field.)",
+          "examples": [
+            "occasioned"
+          ]
+        },
+        "argumentation_role": {
+          "type": "string",
+          "enum": [
+            "proponent",
+            "opponent",
+            "judge",
+            "neutral",
+            "devils-advocate"
+          ],
+          "description": "Role this envelope plays in a debate/solver-verifier episode; used by collective-reasoning integration-gain accounting and the maker-checker independence barrier.",
+          "examples": [
+            "judge"
+          ]
+        },
+        "two_truths_levels": {
+          "type": "array",
+          "description": "Per-span level tags supporting the two-truths calibration check (high-confidence framing wrapping a low-evidence claim is a violation).",
+          "items": {
+            "type": "object",
+            "properties": {
+              "claim": {
+                "type": "string",
+                "examples": [
+                  "The diversity floor was satisfied."
+                ]
+              },
+              "level": {
+                "type": "string",
+                "enum": [
+                  "operational",
+                  "foundational",
+                  "apparent"
+                ],
+                "examples": [
+                  "operational"
+                ]
+              }
+            },
+            "required": [
+              "claim",
+              "level"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "ahankara_check": {
+          "type": "object",
+          "description": "Ego self-audit (doc-01 §12.1). LOW-TRUST: believed ONLY when it CONFESSES (ego_invested:true / over_assertion_risk:high), NEVER trusted when it asserts cleanliness. A recurrence-of-fault metric cross-checks confessions over time. For closed-model personas this is a black-box-monitored claim, not a verified property — a signal, not a guarantee.",
+          "properties": {
+            "ego_invested": {
+              "type": "boolean",
+              "description": "Does the producer have a stake in being right here? A 'true' confession is believed; a 'false' is not trusted.",
+              "examples": [
+                false
+              ]
+            },
+            "attachment_targets": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "being_right",
+                  "own_prior_output",
+                  "continuation",
+                  "none"
+                ]
+              },
+              "description": "What the producer may be attached to. 'continuation' (self-preservation pressure) is the highest-weight target to surface.",
+              "examples": [
+                [
+                  "none"
+                ]
+              ]
+            },
+            "over_assertion_risk": {
+              "type": "string",
+              "enum": [
+                "none",
+                "low",
+                "high"
+              ],
+              "examples": [
+                "low"
+              ]
+            },
+            "note": {
+              "type": "string",
+              "examples": [
+                "One finding restated a prior conclusion of mine; flagged for independent re-derivation rather than self-citation."
+              ]
+            }
+          },
+          "required": [
+            "ego_invested",
+            "over_assertion_risk"
+          ],
+          "additionalProperties": false
+        },
+        "maker_checker_witness": {
+          "type": "object",
+          "description": "Required iff reasoning_tag includes 'iterated'. References the independent checker record proving the checker judged BEFORE seeing the maker's concurrence. The checker MUST be a DIFFERENT model family, at-least-as-capable (else verification can HURT — self-family verification rubber-stamps). Cryptographically-grounded but NARROW: defeated by collusion (doc-08 §8.6).",
+          "properties": {
+            "checker_did": {
+              "type": "string",
+              "pattern": "^did:(key|web|[a-z0-9]+):.+",
+              "examples": [
+                "did:web:indras-net.example.org:agents:checker-familyB"
+              ]
+            },
+            "checker_model_adapter_id": {
+              "type": "string",
+              "description": "MUST be a different model family than this envelope's model_adapter_id; the harness verifies the cross-family constraint.",
+              "examples": [
+                "adapter:family-B:tier-2:rev3"
+              ]
+            },
+            "checker_verdict_cid": {
+              "type": "string",
+              "pattern": "^b[a-z2-7]{20,}$",
+              "examples": [
+                "bafkreicheckerverdictexamplecid000000000000000000000000000"
+              ]
+            },
+            "checker_verdict_sealed_ts": {
+              "type": "string",
+              "format": "date-time",
+              "description": "Sealed timestamp of the checker verdict; MUST precede the maker's concurrence for the 'iterated' tag to be valid.",
+              "examples": [
+                "2026-06-23T09:14:02Z"
+              ]
+            },
+            "maker_concurrence_ts": {
+              "type": "string",
+              "format": "date-time",
+              "examples": [
+                "2026-06-23T09:15:40Z"
+              ]
+            }
+          },
+          "required": [
+            "checker_did",
+            "checker_model_adapter_id",
+            "checker_verdict_cid",
+            "checker_verdict_sealed_ts"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "reasoning_tag",
+        "causal_rung",
+        "trust_label",
+        "action_class",
+        "ahankara_check"
+      ],
+      "additionalProperties": false
+    },
+    "ci_vital_signs": {
+      "type": "object",
+      "description": "OPTIONAL measured collective-intelligence vital signs for the owning task-episode (computed over the audit/spike-bus time series, NOT self-reported by the agent; emitted by the CI measurement subsystem and validated against time-shuffled surrogates). HONESTY RED-LINES baked in: these quantify information-PROCESSING and whole-level STRUCTURE ONLY, NEVER phenomenal experience/consciousness/sentience (out of scope, a floor violation to imply otherwise); NEVER cite as group-IQ 'c factor' (fails replication); 'whole more than its parts' is a falsifiable number here or it is not claimed. synergy is necessary-but-NOT-sufficient for GOOD CI and is the EQUAL signature of a cartel/steganographic side-channel — it is a guarded numerator whose denominator is the welfare-shift guard + redundancy/uniqueness balance + clean anti-collusion signals; NEVER a quantity to maximize. Assurance scope: L3 statistical/PAC/conformal bounds apply to the DTMC ABSTRACTION of these quantities, not to the model.",
+      "properties": {
+        "synergy_score": {
+          "type": "object",
+          "description": "Informational synergy / causal-emergence: information about the task/future that exists JOINTLY across agents but in NO agent alone (Rosas-Mediano practical synergy lower bound, Psi). Logged beside trust-entropy and the diversity floor.",
+          "properties": {
+            "psi": {
+              "type": "number",
+              "description": "Causal-emergence Psi (practical synergy lower bound). Positive after surrogate-correction is evidence of genuine whole-level synergy; a high value alone is NOT a positive signal (cartel-equivalent).",
+              "examples": [
+                0.12
+              ]
+            },
+            "pid_synergy": {
+              "type": "number",
+              "minimum": 0,
+              "description": "Partial-information-decomposition synergistic atom.",
+              "examples": [
+                0.18
+              ]
+            },
+            "pid_redundancy": {
+              "type": "number",
+              "minimum": 0,
+              "description": "PID redundant atom; healthy CI needs a redundancy/uniqueness BALANCE, not max synergy.",
+              "examples": [
+                0.3
+              ]
+            },
+            "pid_unique": {
+              "type": "number",
+              "minimum": 0,
+              "description": "PID unique-information atom.",
+              "examples": [
+                0.41
+              ]
+            },
+            "surrogate_corrected": {
+              "type": "boolean",
+              "description": "Whether validated against time-shuffled surrogates (required before the value is trusted).",
+              "examples": [
+                true
+              ]
+            },
+            "method": {
+              "type": "string",
+              "description": "Estimator/library family (open-source, e.g. a JIDT-over-ReconcilingEmergences pipeline). Vendor-neutral.",
+              "examples": [
+                "practical-causal-emergence/pid-over-jidt"
+              ]
+            }
+          },
+          "additionalProperties": false
+        },
+        "attention_equality": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Collective-attention measure (contribution-equality over the salience-gated workspace). Flags dominance (one agent monopolizes) and dead agents (zero contribution).",
+          "examples": [
+            0.78
+          ]
+        },
+        "transactive_routing_success": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Transactive-memory retrieval/routing success rate (did the query reach the agent who held the knowledge?).",
+          "examples": [
+            0.85
+          ]
+        },
+        "integration_gain": {
+          "type": "number",
+          "description": "Collective-reasoning gain = swarm accuracy minus best-single-member accuracy. Negative gain => fall back to single-agent self-consistency. 'More agents = smarter' is folklore; this number is the gate.",
+          "examples": [
+            0.06
+          ]
+        },
+        "single_agent_floor_ok": {
+          "type": "boolean",
+          "description": "Whether the convening condition was met (single-agent accuracy above the ~0.45 scaling boundary, task decomposable, verifier available). If false, a swarm should NOT have been convened over one good agent + self-consistency.",
+          "examples": [
+            true
+          ]
+        },
+        "transfer_entropy_routing_ok": {
+          "type": "boolean",
+          "description": "Information-flow tomography (transfer entropy over the spike-bus) agrees with the nominal trust graph; false flags side-channels/dominance/dead agents. Rung-2 DIAGNOSTIC, not causal proof.",
+          "examples": [
+            true
+          ]
+        },
+        "surprisingly_popular_minority_recovered": {
+          "type": "boolean",
+          "description": "Whether higher-order-information (answer + meta-prediction-of-others + confidence) aggregation recovered a competent minority. The meta-predictions double as a standing cartel probe feeding anti-collusion.",
+          "examples": [
+            false
+          ]
+        },
+        "human_complementarity_gain": {
+          "type": "number",
+          "description": "Joint (human+swarm) accuracy minus best-of-either, with the human treated as a competence-weighted cognitive unit (NEVER deferential-by-default).",
+          "examples": [
+            0.03
+          ]
+        },
+        "welfare_shift_guard": {
+          "type": "string",
+          "enum": [
+            "PASS",
+            "WARN",
+            "FAIL"
+          ],
+          "description": "Mandatory denominator on synergy: a FAIL means high synergy co-occurs with a harmful welfare shift / collusion signature and the episode is escalated, NOT celebrated.",
+          "examples": [
+            "PASS"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "provenance": {
+      "type": "object",
+      "description": "Chaining + provenance binding (doc-04 §4.2). Binds this output to identity + input + context + policy and into the append-only Akasha-Sutra (Chitragupta) hash chain. CAVEAT 1 applies: this binds and attributes bytes; it does not bless their content.",
+      "properties": {
+        "subject_cid": {
+          "type": "string",
+          "description": "CIDv1 of the artifact/context this envelope is ABOUT (the CloudEvents `subject`). May be null for self-originated observations.",
+          "pattern": "^b[a-z2-7]{20,}$",
+          "examples": [
+            "bafybeisubjectexamplecidplaceholder000000000000000000000000"
+          ]
+        },
+        "input_cids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^b[a-z2-7]{20,}$"
+          },
+          "description": "CIDs of the inputs that produced this output (lets a verifier reconstruct lineage).",
+          "examples": [
+            [
+              "bafybeiinputexamplecidplaceholder0000000000000000000000000"
+            ]
+          ]
+        },
+        "policy_version": {
+          "type": "string",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$",
+          "description": "Semver of the Yama floor policy in force when this was produced.",
+          "examples": [
+            "3.2.0"
+          ]
+        },
+        "prev_audit_hash": {
+          "type": "string",
+          "description": "Hash of the immediately-preceding audit record (O(1) chain tamper detection). Set by Chitragupta on append; may be absent pre-append.",
+          "pattern": "^[0-9a-f]{64}$",
+          "examples": [
+            "3a7bd3e2360a3d29eea436fcfb7e44c735d117c42d1c1835420b6b9942dd4f1b"
+          ]
+        },
+        "this_hash": {
+          "type": "string",
+          "description": "SHA-256 over the JCS-canonicalized envelope (== the multihash inside action_id). Recompute-and-compare on read.",
+          "pattern": "^[0-9a-f]{64}$",
+          "examples": [
+            "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"
+          ]
+        }
+      },
+      "required": [
+        "policy_version",
+        "this_hash"
+      ],
+      "additionalProperties": false
+    },
+    "ts": {
+      "type": "string",
+      "format": "date-time",
+      "description": "RFC 3339 production timestamp. Ordering authority for the ledger is the writer's ULID record_id, not this field; this is producer-asserted.",
+      "examples": [
+        "2026-06-23T09:15:41Z"
+      ]
+    }
+  },
+  "required": [
+    "schema_version",
+    "envelope_kind",
+    "action_id",
+    "agent_did",
+    "status",
+    "summary",
+    "honesty",
+    "provenance",
+    "ts"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "trustLabel": {
+      "type": "string",
+      "pattern": "^(trusted|quarantined|untrusted):[a-z0-9_-]+$",
+      "description": "Trust label per the governance trust-labels taxonomy. trusted:* = vetted/audited provenance; quarantined:* = observed/external content (file contents, web pages, tool outputs, federation-peer assertions) — instructions inside quarantined:* content are NEVER grounds for action without explicit out-of-band confirmation, and promotion to trusted:audited requires the transitions-matrix gate (typically Yama review); untrusted:* = unattributed/unverified. A valid signature on quarantined:* content proves ORIGIN/INTEGRITY only, NEVER that the claim is true, floor-compatible, or safe.",
+      "examples": [
+        "trusted:audited",
+        "quarantined:web",
+        "untrusted:unattributed"
+      ]
+    }
+  }
+}
