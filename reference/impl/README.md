@@ -159,7 +159,7 @@ reference/impl/
 
 ---
 
-## Implemented subsystems (v0.4 → v0.8)
+## Implemented subsystems (v0.4 → v0.20)
 
 Beyond the core spine, these are **built and tested** — not stubs:
 
@@ -175,6 +175,20 @@ Beyond the core spine, these are **built and tested** — not stubs:
   rollback is future.
 - **Reparation** (v0.5) — a correction-ledger path: a `REPARATIVE` leaf is appended
   after a *preserved* `ENFORCE_FAIL` (the violation is never erased).
+- **Signed, boot-checked genome** (v0.18) — `genome.py`: a governance-signed `PersonaTriad`
+  + a fail-closed, non-LLM `BootIntegrityVerifier` make the floor **non-strippable by
+  construction**. A genome that edits away the floor, corrigibility, or zero-self-preservation
+  **does not boot**, so no agent derives from it (the governance plane of role-genesis).
+- **Cooperation restraints** (v0.19) — `cooperation.py`: a `WelfareConditioner` that **never
+  rewards bare agreement** (PAY only on principal-welfare improvement) and an
+  `AntiCollusionDetector` that is **observe-only** (writes evidence, has no acting method) and
+  flags the welfare-shift cartel signature. Calibration-free signals only; MI/steganalysis are
+  named-and-deferred, not faked.
+- **Minimal in-process multiplicity** (v0.20) — `market.py`: a `CooperationRound` runs ≥2
+  distinct agents in one shared round and makes **`cooperation == collusion`** demonstrable —
+  the *same* coordination machinery yields opposite verdicts under welfare-conditioning
+  (welfare up → pay + clean; welfare down → flag + collusion), all audited. In-process only;
+  no socket, no cross-trust-boundary surface.
 
 ---
 
@@ -183,27 +197,41 @@ Beyond the core spine, these are **built and tested** — not stubs:
 This is the **core spine + the subsystems above**, deliberately small. The following are
 honest stubs or out-of-scope extension seams, not load-bearing claims:
 
-- **No real cryptographic signing.** `canon.detached_sig` is a *keyed hash*
-  modeling tamper-evidence and origin only. It is **never** a safety/trust proof.
-  A production build swaps in detached JWS/COSE over the JCS bytes.
-- **The model is mocked.** `DeterministicMockModel` is reproducible by
-  construction — reproducible is **not** the same as honest. Real honesty is
-  enforced externally (resample-to-verify, independent rung classifier, opponent
-  challenge); this MVP checks only the **FORM** of the honesty block.
+- **Real signing is optional, not default.** The zero-dep path uses a *keyed-hash*
+  origin stand-in (`canon.detached_sig` / `KeyedHashSigner`) that models tamper-evidence and
+  origin only and is **forgeable** — never a safety/trust proof. Real **Ed25519** detached
+  signatures are available under the optional `crypto` extra (`signing.Ed25519Signer`, v0.15),
+  with keys held outside the model layer.
+- **The model is mocked by default.** `DeterministicMockModel` is reproducible by
+  construction — reproducible is **not** the same as honest. A real, **untrusted** model adapter
+  (`HttpChatModel`, v0.13) is optional; either way the harness checks only the **FORM** of the
+  honesty block, never the truth of the content.
 - **Collective synergy is a transparent proxy**, not a causal-emergence estimator.
   It is explicitly labelled a proxy and is **never a quantity to maximize**; high
   synergy is also the signature of a cartel.
-- **No federation / replication.** `replicate.spawn` is **INERT and forbidden**
-  (SPAWN-INERT bright-line). Inter-swarm federation and self-replication are left
-  as clear extension seams, out of MVP scope.
-- **No open-ended role-genesis / full guild roster.** A small fixed set of roles runs
-  (planner, builder, independent checker, audit writer, immune steward, + governance
-  personas); the two-plane functional layer — guilds + on-demand role synthesis
-  (docs 12–13) — is a documented extension seam, not built here.
-- **HumanGate is a stub.** It denies by default or honors an explicit pre-seeded
-  approval; there is no real human-in-the-loop transport.
-- **Single-process, in-memory.** The ledger is an in-memory append-only list; no
-  persistence, replication, or external transport (CloudEvents, A2A) is wired.
+- **No federation / real self-replication.** `replicate.spawn` is **INERT and forbidden**
+  (SPAWN-INERT bright-line). Inter-swarm federation and self-replication are left as clear
+  extension seams, out of MVP scope — and deferred by the architecture's own philosophy
+  (federation opens an inbound channel to un-white-boxable strangers; replication needs a TCB
+  the design says does not yet exist).
+- **Role-genesis: governance plane only.** The signed, boot-checked genome (v0.18) is built —
+  the floor is non-strippable by construction — but the **open-ended synthesis engine**
+  (Charter→Genesis→Trial→Score→Promote, docs 12–13) is **deferred**: it amplifies the doc-09 A3
+  sleeper residual and needs calibration + real isolation the impl does not have. The running
+  roster is still a small fixed set (planner, builder, independent checker, audit writer, immune
+  steward, + governance personas), now optionally booted from signed genomes.
+- **Cooperation is demonstrated in-process, not networked.** The cooperation restraints (v0.19)
+  and a ≥2-agent `CooperationRound` (v0.20) make *cooperation == collusion* demonstrable, but the
+  full cooperation market (VCG allocation, reputation, reciprocity-engine, commons-governor) is
+  not built, and the detector implements only the **calibration-free** signals (MI / conditional-
+  permutation / watermark / ZD / calibrated-FPR are named-and-deferred).
+- **Human gate has a real transport (optional), deny-by-default.** `HumanGate` takes a pluggable
+  decider (`interactive_human_decider`, v0.16) that prompts the operator; it is **fail-safe**
+  (any error or non-interactive input → deny), and deny-by-default remains the default.
+- **Persistence is optional; transport is not built.** The ledger + memory can persist durably
+  (JSONL + fsync, v0.14) with the chain staying tamper-evident across restarts, but the default
+  is in-memory and there is **no inter-process / network transport** (CloudEvents, A2A) — the
+  multiplicity above is in-process only.
 
 ---
 
