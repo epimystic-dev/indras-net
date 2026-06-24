@@ -156,7 +156,7 @@ agents/              instantiated SOUL/INSTRUCTIONS/IDENTITY persona triads
 ## 7. Scope — what is implemented vs specified
 
 ```yaml
-implemented_and_tested:    # reference/impl/, 55 tests
+implemented_and_tested:    # reference/impl/, 135 tests, zero-dep default
   - deterministic policy floor (deny-default, non-bypass, tiers, Rule-of-Two→HumanGate)
   - capability confinement (least privilege, no self-grant)
   - tamper-evident hash-chained audit ledger (exclusive writer, action-class authority)
@@ -167,11 +167,22 @@ implemented_and_tested:    # reference/impl/, 55 tests
   - immune system (WARN on monoculture, HALT on substrate/tamper breach)
   - reparative correction-ledger (violation preserved, not erased)
   - collective vital-signs (structure/processing only; welfare-conditioned; never consciousness)
-specified_not_implemented:  # documented as clear extension seams
-  - real cryptographic signing (current detached_sig is a keyed-hash stand-in)
-  - inter-swarm federation; controlled self-replication; open-ended role-genesis
-  - ledger persistence; real human-in-the-loop gate transport
-  - full functional-specialist breadth
+  - signed boot-checked genome (PersonaTriad + fail-closed BootIntegrityVerifier; floor NON-STRIPPABLE by construction; role-genesis GOVERNANCE plane)
+  - welfare-conditioner (never rewards bare agreement; PAY only on principal-welfare gain — threshold-independent)
+  - anti-collusion detector (OBSERVE-ONLY; no acting method; calibration-free signals only; MI/stego/calibrated-FPR named-and-deferred)
+  - in-process multiplicity (>=2-agent CooperationRound; cooperation == collusion DEMONSTRATED — same machinery, opposite verdicts under welfare-conditioning)
+implemented_optional:       # opt-in extras; the zero-dep/mock/deny-default path stays the default
+  - real (untrusted) model adapter (HttpChatModel over any chat-completions HTTP API)
+  - sandboxed effect execution (path-confined; no network/subprocess)
+  - durable tamper-evident persistence (JSONL+fsync; verify() holds across restarts)
+  - real Ed25519 signing (optional crypto extra; keys outside the model layer)
+  - real human-gate transport (pluggable decider; fail-safe deny-by-default)
+deferred_by_design:         # full forms held back by the architecture's own philosophy
+  - inter-swarm federation (would open an inbound channel to un-white-boxable strangers; breaks the single-trust-domain assumption)
+  - real self-replication (needs a TCB — hardware off-switch, microVM, quorum budget — the design says does not yet exist; replicate.spawn stays INERT/forbidden)
+  - open-ended role-genesis SYNTHESIS engine (Charter->Genesis->Trial->Score->Promote; amplifies the A3 sleeper residual; needs calibration + isolation)
+  - live neuromorphic coordination bus (uncalibrated homeostatic controls; risks suppressing the protected diversity invariant)
+  - full functional-specialist breadth; cooperation market (VCG/reputation/reciprocity-engine/commons-governor)
 not_validated:
   - end-to-end behavior of the composed loop against an adaptive multi-agent red team
 ```

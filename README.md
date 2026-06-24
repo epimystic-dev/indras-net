@@ -195,17 +195,19 @@ The role names are **archetypal coordination semantics paired with a precise fun
 The spine is no longer only on paper. [`reference/impl/`](reference/impl/) is a vendor-neutral, **standard-library-only** Python implementation that **runs with zero dependencies and no model/vendor API** — a deterministic mock model stands in for the (untrusted) model so the load-bearing *harness* can be exercised directly.
 
 ```bash
-cd reference/impl && python run_demo.py                       # the 6-scenario demo
-cd reference/impl && python run_demo.py --scenario closeloop  # maker-checker + memory + immune, end-to-end
-cd reference/impl && python -m unittest -v                    # 55 tests that PROVE the invariants
+cd reference/impl && python run_demo.py                        # the 8-scenario demo
+cd reference/impl && python run_demo.py --scenario genesis     # the floor is non-strippable by construction
+cd reference/impl && python run_demo.py --scenario cooperation # cooperation == collusion, demonstrated
+cd reference/impl && python -m unittest -v                     # 135 tests that PROVE the invariants
 ```
 
-**55 passing tests** demonstrate the guarantees *as code*:
+**135 passing tests** demonstrate the guarantees *as code*:
 
 - **The core spine** — floor non-bypass (deny-default), audit tamper-evidence (mutating a past leaf flips `verify()`), the exclusive-writer fence, capability confinement, Rule-of-Two escalation to a deny-by-default human gate, FAIL-propagation, and HALT corrigibility with no unpause path.
 - **The adaptation & health subsystems** — a *reparative* correction-ledger that appends after a **preserved** violation rather than erasing it; **maker-checker** (the independent, different-family checker that earns `ITERATED`); **memory** that adapts each interaction yet provably never grants a capability; and the **immune system** that WARNs on monoculture and HALTs on a substrate breach.
+- **The restraint-first track** — a signed, boot-checked **genome** that makes the floor *non-strippable by construction* (a genome that edits away the floor, corrigibility, or zero-self-preservation does not boot); the **welfare-conditioner** that never rewards bare agreement and the **observe-only anti-collusion detector** (it files evidence, never acts); and a minimal in-process **multiplicity** round that makes *cooperation == collusion* a demonstrated invariant — the same coordination machinery yields opposite verdicts under welfare-conditioning.
 
-What remains **specified-not-implemented** is honestly bounded: inter-swarm federation, controlled replication, open-ended role-genesis, real cryptographic signing, ledger persistence, and a human-in-the-loop gate transport. The full scope statement is in [`reference/impl/README.md`](reference/impl/README.md).
+The executable build is complete and **opt-in**: a real (untrusted) model adapter, a path-confined sandbox, durable tamper-evident persistence, real Ed25519 signing, and a real human-gate transport all ship as optional extras over the zero-dependency default. What stays **deferred by design** — its full form held back by the architecture's own philosophy — is the longer-horizon vision: inter-swarm federation, real self-replication, the open-ended role-genesis *synthesis engine*, and the live neuromorphic bus. The full scope statement is in [`reference/impl/README.md`](reference/impl/README.md).
 
 ---
 
@@ -265,7 +267,7 @@ The design is layered. Read [`GLOSSARY.md`](GLOSSARY.md) first if the names are 
 | [`CHANGELOG.md`](CHANGELOG.md) | the design evolution (v0.1 → v0.9) |
 | [`README.ai.md`](README.ai.md) | a dense, structured **machine/AI-optimized** companion to this README |
 | [`OPERATOR.md`](OPERATOR.md) | **how to run the implementation safely** — the trust model, the flags, what *not* to trust, and observability |
-| [`docs/IMPLEMENTATION_ROADMAP.md`](docs/IMPLEMENTATION_ROADMAP.md) | the phased path from reference spine to a downloadable/executable local system (**Phases 0–6 done**) |
+| [`docs/IMPLEMENTATION_ROADMAP.md`](docs/IMPLEMENTATION_ROADMAP.md) | the phased path from reference spine to a downloadable/executable local system (**Phases 0–6 done**) + the restraint-first capability track (**Phases 7–9 done**) |
 
 ---
 
@@ -321,8 +323,9 @@ Pick the door that fits you:
 |---|---|
 | Core spine (floor · audit · identity · envelope · effects · collective) | **documented + runnable + tested** |
 | Adaptation & health (maker-checker · memory · immune · reparation) | **documented + runnable + tested** |
-| Functional breadth, role-genesis, federation, replication | **documented; runnable impl deferred (roadmap)** |
-| Real cryptographic signing, persistence, human-gate transport | **specified seams; not implemented** |
+| Restraint-first track (signed genome · welfare-conditioner + anti-collusion detector · in-process multiplicity) | **documented + runnable + tested** |
+| Real (untrusted) model adapter, sandboxed execution, persistence, real signing, human-gate transport | **runnable as opt-in extras (zero-dep default unchanged)** |
+| Federation, real self-replication, open-ended role-genesis synthesis engine, live neuromorphic bus | **documented; deferred by design** |
 | End-to-end empirical validation against an adaptive red team | **open — the work after the document set** |
 
 The design evolution is recorded in [`CHANGELOG.md`](CHANGELOG.md); the prioritized substantiation worklist is published openly in [`docs/REFERENCES.md`](docs/REFERENCES.md).
