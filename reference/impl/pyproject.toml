@@ -1,0 +1,54 @@
+# SPDX-License-Identifier: Apache-2.0
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "indras-net"
+description = "Reference implementation of the core spine of Indra's Net — an ethical swarm-intelligence architecture (enforce externally, ask internally)."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "Apache-2.0" }
+authors = [{ name = "Epimystic" }]
+keywords = [
+  "swarm-intelligence",
+  "ai-safety",
+  "ai-governance",
+  "multi-agent",
+  "policy-as-code",
+  "audit",
+  "agent-architecture",
+]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: Apache Software License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+  "Topic :: Security",
+]
+# Zero runtime dependencies: the reference harness + the deterministic mock model are
+# stdlib-only. Real-model and real-signature support arrive as OPTIONAL extras in later
+# phases (see docs/IMPLEMENTATION_ROADMAP.md), never on the default offline path.
+dependencies = []
+dynamic = ["version"]
+
+[project.urls]
+Homepage = "https://epimystic.com"
+Repository = "https://github.com/epimystic-dev/indras-net"
+
+[project.scripts]
+indras-net = "indras_net.cli:main"
+
+[tool.setuptools.dynamic]
+version = { attr = "indras_net.__version__" }
+
+[tool.setuptools.packages.find]
+include = ["indras_net*"]
+exclude = ["tests*"]

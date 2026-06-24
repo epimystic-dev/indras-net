@@ -50,11 +50,28 @@ The role names below are **coordination glosses**, not theology:
 
 ---
 
-## Run it (standard library only — no pip, no network)
+## Install it (standard library only — no runtime dependencies)
 
 ```bash
-# end-to-end demonstration of all five scenarios
+# from a clone of the repo, install the reference implementation
+pip install ./reference/impl          # provides the `indras-net` command
+
+indras-net version
+indras-net demo                       # the full 6-scenario demonstration
+indras-net demo --scenario closeloop  # one scenario (see `indras-net scenarios`)
+indras-net run "summarize the quarterly report"   # gate a single task end-to-end
+```
+
+> Phase 0 (packaging + CLI + CI) is in place. The model is still the reproducible,
+> no-network **mock**; a real (local or remote) model adapter arrives in Phase 1 —
+> see [`docs/IMPLEMENTATION_ROADMAP.md`](../../docs/IMPLEMENTATION_ROADMAP.md).
+
+## Run it from source (no install required)
+
+```bash
+# end-to-end demonstration of all six scenarios
 cd reference/impl && python run_demo.py
+cd reference/impl && python -m indras_net demo    # equivalent, via the package
 
 # a single scenario: {all, happy, floor, tamper, confine, halt, closeloop}
 cd reference/impl && python run_demo.py --scenario floor

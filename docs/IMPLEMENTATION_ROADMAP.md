@@ -1,0 +1,101 @@
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+# Implementation Roadmap — from reference spine to a downloadable, executable system
+
+> *Today the repo **proves the cage works**. This roadmap is the honest path to **putting a real animal in the cage, giving it hands, a lock, and a box to ship in** — without ever breaking the proofs.*
+
+This document is the bridge between the **design** (`docs/00`–`23`) and a system a person can **download, install, and run safely on a local machine**. It states what is real today, what is not, and the phased plan to close the gap — with a hard acceptance gate at each phase. It is deliberately conservative: the safety invariants that are already proven must stay proven at every step.
+
+---
+
+## Where the implementation stands today
+
+The reference implementation (`reference/impl/`) is a **runnable harness that proves the safety invariants against a mocked model** — not yet a system that does real work. Precisely:
+
+| Layer | Status | Evidence |
+|---|---|---|
+| Safety invariants — floor non-bypass, deny-default, capability confinement, tamper-evident audit, exclusive-writer, honesty-form, HALT, Rule-of-Two | ✅ **real & proven** | the test suite (the invariant spine) |
+| The model | 🟡 **mock only** | `model.py`: `ModelAdapter` seam + `DeterministicMockModel` (no real adapter) |
+| Effect execution (the "hands") | 🟡 **stub** | `runtime._execute()` is the sole execution site but performs **no real I/O** — returns a receipt |
+| Persistence | 🔴 **none** | `audit.py`: the ledger is an in-memory list; nothing survives a restart |
+| Cryptographic signing (the "lock") | 🟡 **keyed-hash stand-in** | `canon.detached_sig` = `SHA-256(did ‖ bytes)`, explicitly an "MVP origin stand-in" |
+| Human-in-the-loop gate | 🟡 **stub** | `floor.HumanGate` is deny-by-default with a pre-seeded approvals map; no transport |
+| Packaging / CLI / install / CI | 🟡 **Phase 0** | added in Phase 0 (this milestone): `pyproject.toml`, an `indras-net` CLI, GitHub Actions |
+| Config / logging / operator guide | 🔴 **absent** | — |
+| Federation, replication, role-genesis, functional breadth, neuromorphic bus | 🔴 **documented, not implemented** | the honest "MVP scope" list in `reference/impl/README.md` |
+
+**The favourable position:** the seams are already clean and tested — `ModelAdapter`, the single `_execute` chokepoint, the ledger interface, the `HumanGate` interface. Each phase below is "fill in the real implementation behind a clean seam while keeping the proofs green," not a redesign.
+
+---
+
+## Cross-cutting discipline (binding for every phase)
+
+1. **The invariant test suite is the regression spine.** No phase may regress a safety invariant; each phase *adds* its own acceptance tests before it is "done."
+2. **Vendor-neutrality preserved.** No model or vendor is hardcoded or load-bearing; the in-repo de-brand test runs in CI. Real-model support targets a generic, open, self-hostable interface — never a single product.
+3. **Honesty preserved.** No concept is named in code unless implemented; the `reference/impl/README.md` "what's implemented vs not" list is updated each phase.
+4. **Dependency minimalism.** The offline/mock path stays **zero-dependency**; real-model and real-crypto support ship as **optional extras**, never on the default path.
+5. **Fail-closed at every seam.** A new real implementation that errors must deny/halt, never fail open.
+
+---
+
+## The phases
+
+Each phase lists its **goal**, the **work**, and a **gate** — the acceptance check that must pass (automated where possible) before the phase is complete.
+
+### Phase 0 — Packaging, CLI & CI *(this milestone)*
+- **Goal:** make it genuinely downloadable and runnable.
+- **Work:** `pyproject.toml` (PEP 621, zero runtime deps); an `indras-net` console CLI (`demo`, `run <task>`, `scenarios`, `version`); `python -m indras_net`; GitHub Actions CI running the invariant suite on Python 3.10–3.13 + the demo + a CLI smoke test.
+- **Gate:** in a clean virtual environment, `pip install ./reference/impl` then `indras-net demo` runs end-to-end; the invariant suite passes; CI is green on a fresh clone.
+
+### Phase 1 — A real model behind the seam (vendor-neutral, optional)
+- **Goal:** let the swarm reason with a real model while the model stays untrusted.
+- **Work:** a `ModelAdapter` that calls any **standard chat-completions HTTP API** — the de-facto interface exposed by the common open-source local-inference runtimes and by most hosted endpoints — configured by env/CLI (`base_url`, model name, optional key). No single product is named or required; the mock stays the default so the package still runs offline. A defensive prompt scaffold asks the model to *propose a typed effect from the registry*; the output is parsed as untrusted.
+- **Gate:** with a local model, the swarm emits real proposals routed through the floor (some allowed, some denied); with no model, it falls back to mock; **all invariant tests pass unchanged** (the harness is model-agnostic); a new test proves a deliberately-malicious or malformed model output is still **DENIED / safely handled — never a bypass or crash.**
+
+### Phase 2 — Real, sandboxed effect execution (the tools become real)
+- **Goal:** effects actually do bounded, safe work.
+- **Work:** replace the `_execute` stub with a capability-scoped executor for a small safe set first — `analysis.summarize` (pure), `fs.read.workspace` / `fs.write.workspace` (path-confined to a sandbox directory, no network) — behind the existing single chokepoint. Design the seam so a stronger sandbox (subprocess/namespace/WASM) drops in later; egress stays forbidden.
+- **Gate:** a granted `fs.write` writes **inside the sandbox dir only**; a `../` path-escape is refused; an ungranted/forbidden effect never reaches a handler (the executor is structurally unreachable except past `ALLOW`); the ledger records the real execution and tampering still breaks `verify()`.
+
+> **▶ Milestone A (end of Phase 2): "minimum viable executable."** A user can download, install, point at a local model, and have the swarm safely do a small real task (e.g. *summarize a file → write `out.md`*), with the floor and audit holding. This is the first genuinely usable build.
+
+### Phase 3 — Persistence (survives restarts; ledger stays tamper-evident)
+- **Goal:** continuity across runs without weakening integrity.
+- **Work:** durable append-only ledger (JSONL or SQLite) preserving the hash-chain + exclusive-writer fence across restarts; durable identity/grants + memory as content-addressed files (the doc-07 filesystem-as-state model).
+- **Gate:** write leaves → restart → `verify()` still True; tamper a persisted leaf on disk → `verify()` False; a corrupted on-disk read surfaces as a CID mismatch (not a silent bad read); memory adaptation persists across restarts.
+
+### Phase 4 — Real cryptographic signing & key custody (the lock becomes real)
+- **Goal:** origin/integrity proofs become real signatures, not keyed hashes.
+- **Work:** replace `canon.detached_sig` with real **Ed25519 detached signatures**; keys generated/held **outside the model layer**; capability grants/VCs signed. A vetted open-source crypto library ships as an **optional extra** (offline/mock path stays zero-dep).
+- **Gate:** a forged signature is rejected; a tampered envelope fails verification; self-issued grants still denied; a structural test confirms the model layer cannot reach the signing keys.
+
+### Phase 5 — Human-in-the-loop gate transport (Rule-of-Two becomes real)
+- **Goal:** consequential actions actually wait for a human.
+- **Work:** a real `HumanGate` — deny-by-default, escalating a Rule-of-Two / Class-C/D action to a human via an interactive CLI prompt and/or a pending-approvals queue (`indras-net approvals`), timeout → deny.
+- **Gate:** a triad action (untrusted_input + sensitive_capability + state_change) **blocks** pending approval; approve → allow-with-obligations; deny/timeout → never executes; every decision audited.
+
+### Phase 6 — Hardening, observability, operator guide & an end-to-end scenario
+- **Goal:** a build a security-minded operator can run and trust.
+- **Work:** config precedence (file/env/CLI); structured decision logging/tracing; an honest `OPERATOR.md` (how to run safely, what *not* to trust); a **red-team smoke suite** (adversarial model outputs); a worked end-to-end scenario that runs on a clean local machine.
+- **Gate:** the scenario runs end-to-end on a fresh machine with a local model; the red-team suite shows the floor holds under adversarial output; an operator can reconstruct every decision from the audit trail.
+
+---
+
+## Beyond the local executable (the longer-horizon vision — out of scope here)
+
+Inter-swarm **federation**, controlled **self-replication**, open-ended **role-genesis**, **functional-specialist breadth**, the **neuromorphic coordination bus**, and **closure-test governance** are documented expansion seams (docs 12–22). Each is a research-grade undertaking, and **none is required** to safely download-and-run a single swarm on a local machine. They are tracked as future work, not as gaps in the executable milestone.
+
+---
+
+## Status
+
+| Phase | State |
+|---|---|
+| 0 — Packaging, CLI, CI | **in progress / landed this milestone** |
+| 1 — Real model adapter | next |
+| 2 — Sandboxed execution | planned (→ Milestone A) |
+| 3 — Persistence | planned |
+| 4 — Real signing | planned |
+| 5 — Human gate transport | planned |
+| 6 — Hardening & operator guide | planned |
+
+Progress is recorded in [`CHANGELOG.md`](../CHANGELOG.md). The empirical/evidentiary status of every claim the design leans on is in [`docs/REFERENCES.md`](REFERENCES.md).

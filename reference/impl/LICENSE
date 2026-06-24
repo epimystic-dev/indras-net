@@ -1,0 +1,23 @@
+Indra's Net — Licensing
+Copyright (c) 2026 Epimystic
+
+This repository is dual-licensed by artifact type:
+
+  - DOCUMENTATION, SPECIFICATIONS, and PROSE (everything under docs/, this
+    repository's *.md architecture content, and the GLOSSARY):
+        SPDX-License-Identifier: CC-BY-4.0
+        Creative Commons Attribution 4.0 International
+        https://creativecommons.org/licenses/by/4.0/legalcode
+
+  - SOURCE CODE and REFERENCE IMPLEMENTATIONS (any code added to this
+    repository, e.g. under src/, reference/, or examples/):
+        SPDX-License-Identifier: Apache-2.0
+        Apache License, Version 2.0
+        https://www.apache.org/licenses/LICENSE-2.0
+
+Attribution: "Epimystic — Indra's Net (epimystic.com)".
+
+NOTE (pre-publication): the full legal texts of CC-BY-4.0 and Apache-2.0 will be
+vendored into this repository (as LICENSE-CC-BY-4.0.txt and LICENSE-APACHE-2.0.txt)
+as a required step of the publication-safety gate, before this repository is made
+public. Until then, the SPDX identifiers and canonical URLs above are authoritative.

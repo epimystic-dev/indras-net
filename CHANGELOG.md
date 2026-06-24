@@ -21,6 +21,26 @@ Nothing yet. Forthcoming work is tracked as **open problems** inside the relevan
 
 ---
 
+## [0.12.0] — 2026-06-24 — *Phase 0: packaging, a CLI, and CI*
+
+The first step of the implementation roadmap ([`docs/IMPLEMENTATION_ROADMAP.md`](docs/IMPLEMENTATION_ROADMAP.md)): turn the reference spine from "a folder you run scripts in" into "a package you install and a command you run." No safety-floor or wire-contract change; the model is still the deterministic mock (a real adapter is Phase 1); **55 tests stay green**.
+
+### Added
+- **`pyproject.toml`** — the reference implementation is now `pip install ./reference/impl`-able, with **zero runtime dependencies** (the harness + mock model are stdlib-only). The version is single-sourced from `indras_net.__version__`, and the package ships its own `LICENSE`.
+- **An `indras-net` CLI** (`indras_net.cli`, also `python -m indras_net`): `demo` (the six scenarios), `run <task>` (gate a single task end-to-end, with `--untrusted` to exercise the Rule-of-Two path), `scenarios`, `version`. Every effect the CLI surfaces is still gated by the deterministic floor and written to the tamper-evident ledger.
+- **GitHub Actions CI** (`.github/workflows/ci.yml`) — installs the package and runs the invariant suite on Python 3.10–3.13, the end-to-end demo, and a CLI smoke test on every push. The in-repo de-brand test runs as part of the suite, so vendor-neutrality is enforced in CI.
+- **`docs/IMPLEMENTATION_ROADMAP.md`** — the honest, phased path from this reference spine to a downloadable/executable local system (Phase 0 packaging → Phase 1 real model → Phase 2 sandboxed execution [Milestone A] → Phase 3 persistence → Phase 4 real signing → Phase 5 human-gate transport → Phase 6 hardening), each phase with a hard acceptance gate, plus a gap table of what is real vs mock/stub/absent today.
+
+### Changed
+- The demonstration moved into the package as `indras_net.demo`; `run_demo.py` is now a thin shim so `python run_demo.py` keeps working from a source checkout.
+
+### Verified (the Phase 0 gate)
+- In a clean virtualenv, `pip install ./reference/impl` succeeds and the `indras-net` command works **from outside the repo**; `indras-net demo` and `indras-net run` execute end-to-end; the 55-test invariant suite passes; the de-brand guard passes with the new package modules.
+
+`__version__` → 0.12.0.
+
+---
+
 ## [0.11.0] — 2026-06-23 — *Substantiation: the numbers get sources, the bounds get stated*
 
 Works the substantiation backlog published in [`docs/REFERENCES.md`](docs/REFERENCES.md). No safety-floor or wire-contract change; the reference implementation is unchanged and its **55 tests stay green**.

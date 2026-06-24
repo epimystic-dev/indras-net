@@ -39,6 +39,16 @@ __pycache__/
 .venv/
 venv/
 env/
+# --- python packaging / tooling artifacts ---
+*.egg-info/
+*.egg
+.eggs/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
+htmlcov/
+.coverage
 
 # --- editor / os ---
 .DS_Store
