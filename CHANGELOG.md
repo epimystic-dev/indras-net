@@ -21,6 +21,18 @@ Nothing yet. Forthcoming work is tracked as **open problems** inside the relevan
 
 ---
 
+## [0.20.0] — 2026-06-24 — *Restraint-first hardening (3/3): minimal in-process multiplicity — `cooperation == collusion`, demonstrated*
+
+The capstone of the restraint-first track. The spine could only ever run **one sequential occasion at a time**, so agents had no channel to coordinate through — which meant the architecture's *"single most important safety insight"* (cooperation and collusion are the same machinery with opposite valence) was true only **vacuously**, because collusion was structurally impossible. This release runs **≥ 2 agents in one shared round** (in-process, synchronous — **no socket, no cross-trust-boundary surface**) and applies the Phase-8 restraints to their joint behaviour, so the invariant becomes **demonstrated** rather than asserted. No safety-floor or wire-contract change; **128 → 135 tests**.
+
+### Added
+- **`market.py` — `CooperationRound`** — a minimal multiplicity harness: ≥ 2 distinct agents (distinct DIDs + model families) propose in one shared round; their coordination is measured (largest agreeing bloc) and their partnering graph computed; the round is welfare-conditioned and scanned by the detector; the monitor files an **OBSERVE** leaf through the exclusive writer. It executes no effect and never punishes — the floor stays the sole chokepoint and the detector stays observe-only.
+- **The demonstration (`cooperation` scenario + `test_market.py`, 7 tests):** three agents coordinate **identically** (coordination = 1.00, a full partnering clique) in two rounds that differ **only** in the externally-anchored principal-welfare outcome. Welfare **rises → PAY + CLEAN** (cooperation); welfare **falls → FLAG + COLLUSION** (the cartel signature) — *same coordination machinery, opposite welfare, opposite verdicts*, both audited, the chain still verifying. This is the concrete proof that bare agreement is never the reward terminal and that the anti-collusion claim is now exercised, not vacuous.
+
+`__version__` → 0.20.0. **The restraint-first track (Phases 7–9) is complete:** the floor is non-strippable by construction; the cooperation restraints exist and are observe-only; and the swarm now demonstrates *cooperation == collusion* on a real ≥2-agent substrate — all within the single-trust-domain model, adding no new external surface. What stays deferred (by the architecture's own philosophy) is unchanged: federation (it would open an inbound channel to un-white-boxable strangers), real self-replication (it needs a TCB the design says does not yet exist), the open-ended role-genesis synthesis engine, and the live neuromorphic controls.
+
+---
+
 ## [0.19.0] — 2026-06-24 — *Restraint-first hardening (2/3): the welfare-conditioner + the standing anti-collusion detector*
 
 The two **restraints the cooperation layer requires**, built *before* any multiplicity that could collude (restraint-before-capability). Both are **observe-only** and deterministic — they return verdicts, never act. No safety-floor or wire-contract change; **115 → 128 tests**.

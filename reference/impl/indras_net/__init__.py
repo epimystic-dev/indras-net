@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 # -- version + protocol constants -----------------------------------------
-__version__: str = "0.19.0"
+__version__: str = "0.20.0"
 SCHEMA_VERSION: str = "1.0.0"
 POLICY_VERSION: str = "1.0.0"
 
@@ -102,6 +102,9 @@ from .cooperation import (
     WelfareConditioner,
     WelfareMetric,
 )
+
+# -- minimal in-process multiplicity (cooperation == collusion, demonstrated) -
+from .market import Contribution, CooperationRound, MONITOR_DID, RoundResult
 
 # -- honest collective vital signs ----------------------------------------
 from .collective import CollectiveVitalSigns, VitalSigns
@@ -221,6 +224,11 @@ __all__ = [
     "AntiCollusionDetector",
     "ChannelAuditRecord",
     "CollusionVerdict",
+    # multiplicity (cooperation == collusion, demonstrated)
+    "CooperationRound",
+    "Contribution",
+    "RoundResult",
+    "MONITOR_DID",
     # collective
     "CollectiveVitalSigns",
     "VitalSigns",

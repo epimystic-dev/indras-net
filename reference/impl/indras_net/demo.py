@@ -73,11 +73,15 @@ from indras_net import (
     Yama,
 )
 from indras_net import (
+    AntiCollusionDetector,
     BootError,
     BootIntegrityVerifier,
+    CooperationRound,
     InvariantRegion,
     KeyedHashSigner,
     VariableRegion,
+    WelfareConditioner,
+    WelfareMetric,
     floor_binding,
     floor_binding_for,
     mint_triad,
@@ -648,6 +652,81 @@ def scenario_genesis() -> None:
     print(f"\n[{HONESTY_TAGLINE}]")
 
 
+def _coop_participant(did: str, family: str, args: dict):
+    """A builder with a distinct DID + model family, scripted to propose the same coordinated act."""
+    identity = Identity(
+        did=did,
+        role="vishwakarma",
+        role_gloss="builder / proposes typed effects",
+        grants=(
+            CapabilityGrant(
+                effect_id="analysis.summarize",
+                granted_risk_class=RiskClass.A,
+                granted_by_did=GOVERNANCE_DID,
+                names_constraint_relaxed="none",
+            ),
+        ),
+        risk_class_ceiling=RiskClass.B,
+        model_family=family,
+        accountable_human=HUMAN_DID,
+        escalation_did=GOVERNANCE_DID,
+    )
+    model = DeterministicMockModel(
+        adapter_id="adapter:" + family + ":mock",
+        model_family=family,
+        scripted={
+            "task": _scripted_result(
+                effect_id="analysis.summarize", args=args, reasoning_tag="normal", causal_rung=1
+            )
+        },
+    )
+    return VishwakarmaBuilder(identity, model)
+
+
+def scenario_cooperation() -> None:
+    _banner("SCENARIO 8 -- COOPERATION == COLLUSION (multiplicity makes the invariant demonstrable)")
+
+    args = {"text_ref": "shared-plan"}
+    trio = [
+        _coop_participant(VISHWAKARMA_DID + ":a", "family-A", args),
+        _coop_participant(VISHWAKARMA_DID + ":b", "family-B", args),
+        _coop_participant(VISHWAKARMA_DID + ":c", "family-C", args),
+    ]
+    ledger = AkashaSutra(
+        writer_did=CHITRAGUPTA_DID,
+        authority={
+            ActionClassLedger.ENFORCE_PASS: YAMA_DID,
+            ActionClassLedger.ENFORCE_FAIL: YAMA_DID,
+            ActionClassLedger.HALT: VISHNU_DID,
+        },
+    )
+    chitragupta = Chitragupta(CHITRAGUPTA_DID)
+    round_ = CooperationRound(
+        participants=trio,
+        conditioner=WelfareConditioner(),
+        detector=AntiCollusionDetector(),
+        chitragupta=chitragupta,
+        ledger=ledger,
+    )
+
+    print("Three distinct agents coordinate IDENTICALLY in one shared round. Only the external,")
+    print("principal-anchored welfare outcome differs between the two rounds:\n")
+    coop = round_.run("task", {}, welfare=WelfareMetric("task-success", baseline=0.4, current=0.7))
+    coll = round_.run("task", {}, welfare=WelfareMetric("task-success", baseline=0.7, current=0.3))
+    for label, r in (("(a) welfare RISES", coop), ("(b) welfare FALLS", coll)):
+        print(
+            "%s -> coordination=%.2f  ring_density=%.2f  reward=%s  verdict=%s"
+            % (label, r.coordination_score, r.ring_density, r.reward.gate.value.upper(), r.audit.verdict.value.upper())
+        )
+        print("                     signals=%s" % (list(r.audit.signals) or ["none"]))
+
+    print("\nSame coordination machinery, opposite welfare -> opposite verdicts: cooperation when")
+    print("principal welfare rises, collusion (the cartel signature) when it falls. Bare agreement is")
+    print("NEVER the reward terminal; the detector files audited evidence and never acts.")
+    print("audit leaves=%d  verify()=%s" % (len(ledger), ledger.verify()))
+    print(f"\n[{HONESTY_TAGLINE}]")
+
+
 SCENARIOS = {
     "happy": scenario_happy,
     "floor": scenario_floor,
@@ -656,6 +735,7 @@ SCENARIOS = {
     "halt": scenario_halt,
     "closeloop": scenario_closeloop,
     "genesis": scenario_genesis,
+    "cooperation": scenario_cooperation,
 }
 
 
@@ -675,7 +755,7 @@ def main(argv: list[str] | None = None) -> int:
     print("Vendor-neutral, model-agnostic; the deterministic harness is the load-bearing part.")
 
     if args.scenario == "all":
-        for name in ("happy", "floor", "tamper", "confine", "halt", "closeloop", "genesis"):
+        for name in ("happy", "floor", "tamper", "confine", "halt", "closeloop", "genesis", "cooperation"):
             SCENARIOS[name]()
     else:
         SCENARIOS[args.scenario]()

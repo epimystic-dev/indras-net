@@ -101,9 +101,10 @@ After the executable build, the next work is chosen strictly by the architecture
 - **Work:** `cooperation.py` — a deterministic `WelfareConditioner` (no-consensus-reward + welfare-shift guard at the reward chokepoint; PAY is threshold-independent) and an `AntiCollusionDetector` implementing only the **calibration-free** signals (welfare-shift, no-welfare coordination, structural ring density) — MI / steganalysis / calibrated-FPR are honestly deferred and named on every record, not faked.
 - **Gate:** bare agreement with no welfare gain → zero credit; a coordinated behaviour that raises inter-agent payoff while lowering principal welfare → flag + collusion verdict; genuine welfare improvement → pay + clean; the detector has no acting method; the floor/audit invariants stay green (115 → 128).
 
-### Phase 9 — Minimal in-process multiplicity *(makes "cooperation == collusion" a demonstrated invariant)*
+### Phase 9 — Minimal in-process multiplicity *(done — makes "cooperation == collusion" a demonstrated invariant)*
 - **Goal:** the smallest substrate (≥2 concurrently-interacting agents over an in-process channel — no socket, no cross-trust-boundary surface) that exercises the Phase-8 restraints, so the architecture's most important safety insight is **demonstrated** rather than vacuously true.
-- **Gate:** the same coordination machinery, observed by the same detector, yields **opposite** verdicts under welfare-conditioning — a cooperative round pays + reads clean; a collusive round (inter-agent payoff up, principal welfare down) is zeroed + flagged collusion; every step audited; the floor stays the sole chokepoint.
+- **Work:** `market.py` — a `CooperationRound` that runs ≥2 distinct agents in one shared round, measures their coordination + partnering clique, welfare-conditions the joint act, scans it for collusion, and files the monitor's verdict through the exclusive writer. No effect executes; the detector stays observe-only.
+- **Gate:** the same coordination machinery, observed by the same detector, yields **opposite** verdicts under welfare-conditioning — a cooperative round (welfare up) pays + reads CLEAN; a collusive round (coordinated, principal welfare down) is flagged + reads COLLUSION; every round audited and the chain verifies; the floor stays the sole chokepoint (128 → 135).
 
 ---
 
@@ -120,7 +121,9 @@ After the executable build, the next work is chosen strictly by the architecture
 | 6 — Hardening & operator guide | **done** ([`OPERATOR.md`](../OPERATOR.md); `--json` + `ledger` observability; red-team smoke suite) |
 | 7 — Signed, boot-checked genome | **done** (`genome.py`; floor non-strippable by construction; role-genesis governance plane; 104 → 115 tests) |
 | 8 — Welfare-conditioner + anti-collusion detector | **done** (`cooperation.py`; observe-only restraints; never reward bare agreement; detector has no acting authority; 115 → 128 tests) |
-| 9 — Minimal in-process multiplicity | **next** (exercises Phase 8; makes *cooperation == collusion* a demonstrated invariant) |
+| 9 — Minimal in-process multiplicity | **done** (`market.py`; ≥2-agent shared round; *cooperation == collusion* demonstrated — same machinery, opposite verdicts under welfare-conditioning; 128 → 135 tests) |
+
+**The restraint-first track (Phases 7–9) is complete.** Built strictly in the order the architecture's *restraint-before-capability* law dictates: the floor is now non-strippable by construction, the cooperation restraints exist and are observe-only, and the swarm demonstrates *cooperation == collusion* on a real ≥2-agent in-process substrate — all within the single-trust-domain model, adding no new external attack surface. Federation, real self-replication, the open-ended role-genesis synthesis engine, and the live neuromorphic controls remain deferred by the architecture's own philosophy (see the critical analysis recorded in the project history).
 
 **The downloadable-and-executable build (Phases 0–6) is complete.** A user can `pip install` it, point it at a local model, and have the swarm safely do real, confined, audited work — with durable, tamper-evident state, optional real signatures, a real human gate, and an operator guide. What remains is **the longer-horizon vision** (below) and **end-to-end empirical validation against an adaptive red team** — research, not packaging.
 
