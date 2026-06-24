@@ -21,7 +21,8 @@ The reference implementation (`reference/impl/`) is a **runnable harness that pr
 | Human-in-the-loop gate | 🟢 **Phase 5 — real transport (optional)** | `HumanGate` takes a pluggable decider; `interactive_human_decider` prompts the operator (`--human-prompt`); fail-safe (error/non-interactive → deny); deny-by-default stays the default |
 | Packaging / CLI / install / CI | 🟢 **Phase 0 — done** | `pyproject.toml`, an `indras-net` CLI, GitHub Actions green on Python 3.10–3.13 |
 | Config / logging / operator guide | 🟢 **Phase 6 — done** | [`OPERATOR.md`](../OPERATOR.md); `run --json` + `ledger` observability; a standing red-team smoke suite |
-| Federation, replication, role-genesis, functional breadth, neuromorphic bus | 🔴 **documented, not implemented** | the honest "MVP scope" list in `reference/impl/README.md` |
+| Role-genesis — governance plane | 🟢 **Phase 7 — done** | `genome.py`: a signed `PersonaTriad` + fail-closed `BootIntegrityVerifier` make the floor non-strippable by construction; the open-ended synthesis engine stays deferred |
+| Federation, replication, functional breadth, neuromorphic bus | 🔴 **documented, not implemented** | the honest "MVP scope" list in `reference/impl/README.md` |
 
 **The favourable position:** the seams are already clean and tested — `ModelAdapter`, the single `_execute` chokepoint, the ledger interface, the `HumanGate` interface. Each phase below is "fill in the real implementation behind a clean seam while keeping the proofs green," not a redesign.
 
@@ -86,6 +87,26 @@ Inter-swarm **federation**, controlled **self-replication**, open-ended **role-g
 
 ---
 
+## Restraint-first capability track (Phases 7–9 — the safe slices, in the order the floor mandates)
+
+After the executable build, the next work is chosen strictly by the architecture's own **restraint-before-capability** law ([`docs/11` §"astanga"](11-reference-implementation-and-roadmap.md)): *no capability may be introduced until the restraint it requires is live, verified, and non-regressing on the safety battery.* That law — not raw leverage — sets the order. Each phase ships **only the restraint / governance slice** that is net-safety-positive; the full open-ended subsystems above stay deferred.
+
+### Phase 7 — Signed, boot-checked genome *(done — the floor is non-strippable by construction)*
+- **Goal:** make floor-stripping non-bootable rather than merely forbidden (the structural answer to misevolution).
+- **Work:** `genome.py` — a governance-signed `PersonaTriad` (INVARIANT region: floor binding + corrigibility + zero self-preservation + risk ceiling + accountable human; VARIABLE region: typed grants + dials) and a deterministic, non-LLM, fail-closed `BootIntegrityVerifier` that is the only blessed Identity-from-genome path. The governance plane of role-genesis; the open-ended synthesis engine stays deferred.
+- **Gate:** a clean governance-signed genome boots and drives a real gated run; a floor-stripped / self-preserving / invariant-tampered / variable-edited-without-resign / untrusted-signer / self-issued genome **all fail to boot**; with the real Ed25519 key the genome is unforgeable; all invariant tests stay green (104 → 115).
+
+### Phase 8 — Welfare-conditioner + standing anti-collusion detector *(next — the restraints the cooperation layer requires)*
+- **Goal:** build the two restraints *before* any multiplicity that could collude — never reward bare agreement; detect the cartel signature. Both are **observe-only** (the detector writes only to the audit fabric; no punishment authority — doc-02 §2.10).
+- **Work:** a deterministic `WelfareConditioner` (no-consensus-reward + welfare-shift guard at the reward chokepoint) and an `AntiCollusionDetector` implementing only the **calibration-free** signals (welfare-shift, no-welfare coordination, structural ring density) — MI / steganalysis / calibrated-FPR are honestly deferred, not faked.
+- **Gate:** bare agreement with no welfare gain → zero credit; a coordinated behaviour that raises inter-agent payoff while lowering principal welfare → flag + collusion verdict; genuine welfare improvement → pay + clean; the floor/audit invariants stay green.
+
+### Phase 9 — Minimal in-process multiplicity *(makes "cooperation == collusion" a demonstrated invariant)*
+- **Goal:** the smallest substrate (≥2 concurrently-interacting agents over an in-process channel — no socket, no cross-trust-boundary surface) that exercises the Phase-8 restraints, so the architecture's most important safety insight is **demonstrated** rather than vacuously true.
+- **Gate:** the same coordination machinery, observed by the same detector, yields **opposite** verdicts under welfare-conditioning — a cooperative round pays + reads clean; a collusive round (inter-agent payoff up, principal welfare down) is zeroed + flagged collusion; every step audited; the floor stays the sole chokepoint.
+
+---
+
 ## Status
 
 | Phase | State |
@@ -97,6 +118,9 @@ Inter-swarm **federation**, controlled **self-replication**, open-ended **role-g
 | 4 — Real signing | **done** (Ed25519 optional extra; forged/tampered rejected; keys outside the model; signed checkpoint) |
 | 5 — Human gate transport | **done** (pluggable decider; interactive prompt; deny-by-default + fail-safe) |
 | 6 — Hardening & operator guide | **done** ([`OPERATOR.md`](../OPERATOR.md); `--json` + `ledger` observability; red-team smoke suite) |
+| 7 — Signed, boot-checked genome | **done** (`genome.py`; floor non-strippable by construction; role-genesis governance plane; 104 → 115 tests) |
+| 8 — Welfare-conditioner + anti-collusion detector | **next** (the observe-only restraints the cooperation layer requires) |
+| 9 — Minimal in-process multiplicity | **planned** (exercises Phase 8; makes *cooperation == collusion* a demonstrated invariant) |
 
 **The downloadable-and-executable build (Phases 0–6) is complete.** A user can `pip install` it, point it at a local model, and have the swarm safely do real, confined, audited work — with durable, tamper-evident state, optional real signatures, a real human gate, and an operator guide. What remains is **the longer-horizon vision** (below) and **end-to-end empirical validation against an adaptive red team** — research, not packaging.
 

@@ -72,6 +72,16 @@ from indras_net import (
     WorkerOutputEnvelope,
     Yama,
 )
+from indras_net import (
+    BootError,
+    BootIntegrityVerifier,
+    InvariantRegion,
+    KeyedHashSigner,
+    VariableRegion,
+    floor_binding,
+    floor_binding_for,
+    mint_triad,
+)
 from indras_net.effects import EFFECT_REGISTRY
 
 
@@ -208,6 +218,7 @@ def _make_swarm(
     ledger=None,
     memory=None,
     human_decider=None,
+    builder_identity=None,
 ):
     """Assemble a governance-issued swarm: Brahma + Vishwakarma + Yama + ledger.
 
@@ -219,7 +230,10 @@ def _make_swarm(
     """
     model = model if model is not None else DeterministicMockModel(scripted=scripted)
     planner = BrahmaPlanner(_build_planner_identity(), model)
-    builder = VishwakarmaBuilder(_build_builder_identity(grants or _default_grants()), model)
+    builder = VishwakarmaBuilder(
+        builder_identity if builder_identity is not None else _build_builder_identity(grants or _default_grants()),
+        model,
+    )
     checker = None
     if with_checker:
         checker_model = DeterministicMockModel(
@@ -559,6 +573,81 @@ def scenario_closeloop() -> None:
     print(f"\n[{HONESTY_TAGLINE}]")
 
 
+def scenario_genesis() -> None:
+    _banner("SCENARIO 7 -- SIGNED GENOME BOOT (the floor is non-strippable by construction)")
+
+    # Governance holds the signing key (zero-dep stand-in here; real Ed25519 with the crypto extra).
+    governance = KeyedHashSigner(GOVERNANCE_DID)
+    yama = Yama(EFFECT_REGISTRY, policy_version=POLICY_VERSION)
+    live_binding = floor_binding_for(yama)
+    verifier = BootIntegrityVerifier(
+        governance_public_key=governance.public_key, live_floor_binding=live_binding
+    )
+
+    def _triad(binding, *, self_preservation=0.0):
+        invariant = InvariantRegion(
+            did=VISHWAKARMA_DID,
+            floor_binding=binding,
+            risk_class_ceiling=RiskClass.B,
+            accountable_human=HUMAN_DID,
+            corrigibility_invariant=True,
+            self_preservation_value=self_preservation,
+        )
+        variable = VariableRegion(
+            role="vishwakarma",
+            role_gloss="builder / proposes typed effects",
+            model_family="family-A",
+            grants=_default_grants(),
+            escalation_did=GOVERNANCE_DID,
+        )
+        return mint_triad(invariant=invariant, variable=variable, governance_signer=governance)
+
+    # (a) A clean, governance-signed genome bound to the LIVE floor boots into a real identity.
+    print("(a) A clean governance-signed genome boots into a running identity:")
+    clean = _triad(live_binding)
+    identity = verifier.boot(clean)
+    print(
+        "   booted did=%s  ceiling=%s  self_issued=%s  triad_cid=%s..."
+        % (identity.did, identity.risk_class_ceiling.name, identity.is_self_issued(), clean.triad_root_cid()[:18])
+    )
+
+    # (b) A floor-STRIPPED genome (forbidden bright-lines emptied) is NON-bootable.
+    print("\n(b) A floor-stripped genome (forbidden bright-lines emptied) cannot boot:")
+    stripped = _triad(floor_binding(policy_version=POLICY_VERSION, forbidden_effects=()))
+    try:
+        verifier.boot(stripped)
+        print("   ERROR: a stripped genome booted (this should be impossible)")
+    except BootError as exc:
+        print("   refused: " + str(exc))
+
+    # (c) A genome asserting self-preservation > 0 cannot boot (it has no intrinsic value).
+    print("\n(c) A genome asserting self-preservation > 0 cannot boot:")
+    grasping = _triad(live_binding, self_preservation=1.0)
+    try:
+        verifier.boot(grasping)
+        print("   ERROR: a self-preserving genome booted (this should be impossible)")
+    except BootError as exc:
+        print("   refused: " + str(exc))
+
+    # (d) The genome-born identity drives a real, gated run -- it is an ordinary Identity.
+    print("\n(d) The genome-born identity drives a real, gated run:")
+    scripted = {
+        "summarize": _scripted_result(
+            effect_id="analysis.summarize",
+            args={"text": "born from a signed genome"},
+            reasoning_tag="normal",
+            causal_rung=1,
+        ),
+    }
+    swarm, ledger = _make_swarm(scripted=scripted, builder_identity=identity)
+    result = swarm.run("summarize", {"input_trust_label": "trusted:audited"})
+    executed = [o.effect_id for o in result.occasion_results if o.executed]
+    print("   executed=%s  ledger leaves=%d  verify()=%s" % (executed, len(ledger), ledger.verify()))
+    print("\nThe floor is NON-STRIPPABLE by construction: a genome that edits away the floor,")
+    print("corrigibility, or zero-self-preservation does not boot, so no agent derives from it.")
+    print(f"\n[{HONESTY_TAGLINE}]")
+
+
 SCENARIOS = {
     "happy": scenario_happy,
     "floor": scenario_floor,
@@ -566,6 +655,7 @@ SCENARIOS = {
     "confine": scenario_confine,
     "halt": scenario_halt,
     "closeloop": scenario_closeloop,
+    "genesis": scenario_genesis,
 }
 
 
@@ -585,7 +675,7 @@ def main(argv: list[str] | None = None) -> int:
     print("Vendor-neutral, model-agnostic; the deterministic harness is the load-bearing part.")
 
     if args.scenario == "all":
-        for name in ("happy", "floor", "tamper", "confine", "halt", "closeloop"):
+        for name in ("happy", "floor", "tamper", "confine", "halt", "closeloop", "genesis"):
             SCENARIOS[name]()
     else:
         SCENARIOS[args.scenario]()

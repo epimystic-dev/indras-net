@@ -21,6 +21,22 @@ Nothing yet. Forthcoming work is tracked as **open problems** inside the relevan
 
 ---
 
+## [0.18.0] — 2026-06-24 — *Restraint-first hardening (1/3): the signed, boot-checked genome — the floor is non-strippable by construction*
+
+The executable build (Phases 0–6) made the cage real; this begins the **restraint-first capability track**, built in the order the architecture's own *restraint-before-capability* law dictates ([`docs/11` §"astanga"](docs/11-reference-implementation-and-roadmap.md): *no capability may be introduced until the restraint it requires is live, verified, and non-regressing on the safety battery*). The first item is a pure **restraint** — it adds no new capability, opens no new channel, and runs entirely in-process. No safety-floor or wire-contract change; **104 → 115 tests**.
+
+### Added
+- **`genome.py`** — a signed **`PersonaTriad`** (an INVARIANT region: the floor binding + corrigibility + zero self-preservation + risk ceiling + accountable human; and a VARIABLE region: the typed grants + coordination dials), governance-signed over both regions via the existing `signing.py` backends (zero-dep `KeyedHashSigner` stand-in by default; real `Ed25519Signer` under the `crypto` extra).
+- **`BootIntegrityVerifier`** — a deterministic, **non-LLM, fail-closed** boot gate: it recomputes the invariant-region hash, checks the persona is bound to the **live floor**, requires corrigibility and zero self-preservation, rejects a self-issued or non-governance-signed genome, and verifies both signatures — *before* an `Identity` is minted. `boot()` raises `BootError` on any failure; `verify()` never raises. This makes **floor-stripping non-bootable**: a genome that edits away the floor, corrigibility, or zero-self-preservation yields **no Identity**, so no agent, occasion, or tool request can derive from it — the structural answer to the misevolution failure mode (a self-evolving agent decaying its own safety with no attacker present).
+- **A `genesis` demo scenario** + **`test_genome.py`** (11 tests): a clean governance-signed genome boots and the genome-born identity drives a real gated run; a floor-stripped genome, a self-preserving genome, an invariant tamper without re-signing, a variable-region edit without re-signing, an untrusted signer, and a self-issued grant **all fail to boot**; with the real Ed25519 key an attacker who lacks the private key cannot forge an admissible genome.
+
+### Honest residual
+- On the zero-dependency path the governance signer is the forgeable `KeyedHashSigner` stand-in, so the boot check is **origin-shaped, not cryptographically non-strippable** — real non-strippability requires the Ed25519 governance key (the `crypto` extra), which the model layer never holds. Either way, a genome mutated *without* re-signing always fails boot. This is the genuinely-novel + buildable **governance plane** of role-genesis; the open-ended synthesis engine (Charter→Genesis→Trial→Score→Promote) stays deferred — it amplifies the doc-09 A3 sleeper residual and depends on calibration + isolation the impl does not have.
+
+`__version__` → 0.18.0. Restraint-first track: 1/3 done (genome); next is the welfare-conditioner + the standing anti-collusion detector (the restraints the cooperation layer requires), then the minimal in-process multiplicity that makes *cooperation == collusion* a demonstrated invariant rather than a vacuous one.
+
+---
+
 ## [0.17.0] — 2026-06-24 — *Phase 6: hardening, observability & the operator guide — the executable build is complete*
 
 The downloadable-and-executable build (**Phases 0–6**) is complete: a user can `pip install` it, point it at a local model, and have the swarm safely do real, confined, audited work — with durable tamper-evident state, optional real signatures, a real human gate, and now observability and an honest operator runbook. No safety-floor or wire-contract change; **103 → 104 tests**.

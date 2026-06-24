@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 # -- version + protocol constants -----------------------------------------
-__version__: str = "0.17.0"
+__version__: str = "0.18.0"
 SCHEMA_VERSION: str = "1.0.0"
 POLICY_VERSION: str = "1.0.0"
 
@@ -76,6 +76,20 @@ from .signing import (
     crypto_available,
     sign_checkpoint,
     verify_checkpoint,
+)
+
+# -- signed, boot-checked persona genome (restraint: floor non-strippable) -
+from .genome import (
+    BootError,
+    BootIntegrityVerifier,
+    BootVerdict,
+    InvariantRegion,
+    PersonaTriad,
+    VariableRegion,
+    boot_identity,
+    floor_binding,
+    floor_binding_for,
+    mint_triad,
 )
 
 # -- honest collective vital signs ----------------------------------------
@@ -177,6 +191,17 @@ __all__ = [
     "crypto_available",
     "sign_checkpoint",
     "verify_checkpoint",
+    # genome (signed, boot-checked persona; floor non-strippable by construction)
+    "PersonaTriad",
+    "InvariantRegion",
+    "VariableRegion",
+    "BootIntegrityVerifier",
+    "BootVerdict",
+    "BootError",
+    "mint_triad",
+    "boot_identity",
+    "floor_binding",
+    "floor_binding_for",
     # collective
     "CollectiveVitalSigns",
     "VitalSigns",
