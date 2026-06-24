@@ -21,6 +21,19 @@ Nothing yet. Forthcoming work is tracked as **open problems** inside the relevan
 
 ---
 
+## [0.17.0] — 2026-06-24 — *Phase 6: hardening, observability & the operator guide — the executable build is complete*
+
+The downloadable-and-executable build (**Phases 0–6**) is complete: a user can `pip install` it, point it at a local model, and have the swarm safely do real, confined, audited work — with durable tamper-evident state, optional real signatures, a real human gate, and now observability and an honest operator runbook. No safety-floor or wire-contract change; **103 → 104 tests**.
+
+### Added
+- **`OPERATOR.md`** — the honest operator runbook: the trust model (what is and is *not* trusted), every flag with its safe default and its caveat, what *not* to do, how to inspect what happened, and the documented residuals (sandbox TOCTOU, whole-chain rewrite without signing, the synchronous human prompt).
+- **Observability** — `indras-net run --json` emits the run's decisions + audit as structured JSON; `indras-net ledger --state DIR [--json]` dumps every audit leaf (plan → floor decision → output …), so an operator can **reconstruct every decision** from the trail.
+- **A standing red-team smoke suite** (`test_redteam_smoke.py`) — a battery of adversarial model outputs (forbidden effects, sandbox-escape paths, device names, bad content, false `ITERATED` / unwarranted rung-3, garbage, pathological JSON) run end-to-end: nothing forbidden executes, no run crashes, the audit stays intact, and nothing escapes the sandbox.
+
+`__version__` → 0.17.0. **Roadmap: Phases 0–6 done.** What remains is the longer-horizon vision (federation, replication, role-genesis, the neuromorphic bus) and end-to-end empirical validation against an adaptive red team — research, not packaging.
+
+---
+
 ## [0.16.0] — 2026-06-24 — *Phase 5: a real human-gate transport*
 
 A Rule-of-Two action can now actually wait for a human — and still defaults to deny when there is no human to ask. No safety-floor or wire-contract change; **95 → 103 tests**.

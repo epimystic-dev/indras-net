@@ -62,14 +62,15 @@ indras-net demo --scenario closeloop  # one scenario (see `indras-net scenarios`
 indras-net run "summarize the quarterly report"   # gate a single task end-to-end
 ```
 
-> Phases 0–5 are in place: packaging + CLI + CI; an optional real **untrusted** model
-> (`--model-endpoint`); confined **sandboxed execution** (`--execute --workspace DIR`);
-> **durable, tamper-evident persistence** (`--state DIR` + `indras-net verify-ledger`); optional
-> **real Ed25519 signing** (`pip install indras-net[crypto]`); and a real **human-gate transport**
-> (`--human-prompt`). The reproducible no-network **mock**, a side-effect-free receipt, in-memory
-> state, the keyed-hash stand-in, and a deny-by-default human gate stay the **defaults**, so the
-> package still runs offline with zero dependencies. See the phased plan and the honest gap table
-> in [`docs/IMPLEMENTATION_ROADMAP.md`](../../docs/IMPLEMENTATION_ROADMAP.md).
+> **Phases 0–6 are complete — the downloadable-and-executable build.** Packaging + CLI + CI; an
+> optional real **untrusted** model (`--model-endpoint`); confined **sandboxed execution**
+> (`--execute --workspace DIR`); **durable, tamper-evident persistence** (`--state DIR` +
+> `verify-ledger`); optional **real Ed25519 signing** (`pip install indras-net[crypto]`); a real
+> **human-gate transport** (`--human-prompt`); and **observability + an operator guide** (`--json`,
+> `ledger`, [`OPERATOR.md`](../../OPERATOR.md)). The reproducible no-network mock, a side-effect-free
+> receipt, in-memory state, the keyed-hash stand-in, and a deny-by-default human gate stay the
+> **defaults**, so the package still runs offline with zero dependencies. See the phased plan and the
+> honest gap table in [`docs/IMPLEMENTATION_ROADMAP.md`](../../docs/IMPLEMENTATION_ROADMAP.md).
 
 ## Run it from source (no install required)
 

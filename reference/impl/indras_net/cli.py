@@ -99,6 +99,37 @@ def _cmd_run(args: argparse.Namespace) -> int:
     if memory_path is not None and swarm.memory is not None:
         swarm.memory.save(memory_path)
 
+    if getattr(args, "json", False):
+        import json as _json
+
+        print(
+            _json.dumps(
+                {
+                    "task": args.task,
+                    "model": model_label,
+                    "exec": exec_label,
+                    "state": state_label,
+                    "human": human_label,
+                    "halted": result.halted,
+                    "ledger_leaves": len(ledger),
+                    "ledger_verify": ledger.verify(),
+                    "health": (result.health.status.name if result.health is not None else None),
+                    "occasions": [
+                        {
+                            "role": o.agent_role,
+                            "effect": o.effect_id,
+                            "decision": (o.decision.decision.name if o.decision else None),
+                            "executed": o.executed,
+                            "output": o.output,
+                        }
+                        for o in result.occasion_results
+                    ],
+                },
+                indent=2,
+            )
+        )
+        return 0
+
     print("task: " + args.task)
     print("model: " + model_label)
     print("exec:  " + exec_label)
@@ -138,6 +169,37 @@ def _cmd_verify_ledger(args: argparse.Namespace) -> int:
     except Exception as exc:  # a corrupt on-disk record is loud, never silent
         print("ledger CORRUPT: " + type(exc).__name__ + ": " + str(exc))
         return 1
+    ok = ledger.verify()
+    print("ledger: %d leaves   verify(): %s" % (len(ledger), ok))
+    return 0 if ok else 1
+
+
+def _cmd_ledger(args: argparse.Namespace) -> int:
+    """Dump a persisted ledger's leaves (observability -- reconstruct every decision) + integrity."""
+    import os
+
+    from .audit import AkashaSutra
+    from .demo import CHITRAGUPTA_DID
+
+    path = args.ledger or (os.path.join(args.state, "ledger.jsonl") if args.state else None)
+    if not path or not os.path.isfile(path):
+        print("no ledger found (use --state DIR or --ledger PATH)")
+        return 1
+    try:
+        ledger = AkashaSutra.load(path, CHITRAGUPTA_DID)
+    except Exception as exc:  # a corrupt on-disk record is loud
+        print("ledger CORRUPT: " + type(exc).__name__ + ": " + str(exc))
+        return 1
+    if getattr(args, "json", False):
+        import json as _json
+
+        print(_json.dumps([AkashaSutra._to_record(leaf) for leaf in ledger.leaves()], indent=2))
+    else:
+        for leaf in ledger.leaves():
+            print(
+                "  [%d] %-13s %-26s signer=%s"
+                % (leaf.leaf_index, leaf.action_class.value, leaf.event_type, leaf.signer_role)
+            )
     ok = ledger.verify()
     print("ledger: %d leaves   verify(): %s" % (len(ledger), ok))
     return 0 if ok else 1
@@ -197,12 +259,19 @@ def main(argv: typing.Optional[typing.List[str]] = None) -> int:
         action="store_true",
         help="ask the operator (deny-by-default) when a Rule-of-Two action triggers the human gate (Phase 5)",
     )
+    p_run.add_argument("--json", action="store_true", help="emit the run's decisions + audit as structured JSON")
     p_run.set_defaults(func=_cmd_run)
 
     p_vl = sub.add_parser("verify-ledger", help="verify the integrity of a persisted ledger")
     p_vl.add_argument("--state", metavar="DIR", help="a state directory containing ledger.jsonl")
     p_vl.add_argument("--ledger", metavar="PATH", help="a ledger .jsonl file directly")
     p_vl.set_defaults(func=_cmd_verify_ledger)
+
+    p_lg = sub.add_parser("ledger", help="dump a persisted ledger's leaves (observability) and verify it")
+    p_lg.add_argument("--state", metavar="DIR", help="a state directory containing ledger.jsonl")
+    p_lg.add_argument("--ledger", metavar="PATH", help="a ledger .jsonl file directly")
+    p_lg.add_argument("--json", action="store_true", help="emit the leaves as JSON")
+    p_lg.set_defaults(func=_cmd_ledger)
 
     sub.add_parser("scenarios", help="list the available demo scenarios").set_defaults(func=_cmd_scenarios)
     sub.add_parser("version", help="print the version").set_defaults(func=_cmd_version)

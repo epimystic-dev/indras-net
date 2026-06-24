@@ -264,6 +264,8 @@ The design is layered. Read [`GLOSSARY.md`](GLOSSARY.md) first if the names are 
 | [`agents/`](agents/) | the instantiated persona triads — the Governance/Meta vertical + functional exemplars |
 | [`CHANGELOG.md`](CHANGELOG.md) | the design evolution (v0.1 → v0.9) |
 | [`README.ai.md`](README.ai.md) | a dense, structured **machine/AI-optimized** companion to this README |
+| [`OPERATOR.md`](OPERATOR.md) | **how to run the implementation safely** — the trust model, the flags, what *not* to trust, and observability |
+| [`docs/IMPLEMENTATION_ROADMAP.md`](docs/IMPLEMENTATION_ROADMAP.md) | the phased path from reference spine to a downloadable/executable local system (**Phases 0–6 done**) |
 
 ---
 

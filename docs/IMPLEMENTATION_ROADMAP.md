@@ -20,7 +20,7 @@ The reference implementation (`reference/impl/`) is a **runnable harness that pr
 | Cryptographic signing (the "lock") | 🟢 **Phase 4 — real (optional extra)** | `signing.Ed25519Signer` (real detached signatures; `pip install indras-net[crypto]`) + a signed-head checkpoint that detects a ledger rewrite; the keyed-hash stand-in stays the zero-dep default |
 | Human-in-the-loop gate | 🟢 **Phase 5 — real transport (optional)** | `HumanGate` takes a pluggable decider; `interactive_human_decider` prompts the operator (`--human-prompt`); fail-safe (error/non-interactive → deny); deny-by-default stays the default |
 | Packaging / CLI / install / CI | 🟢 **Phase 0 — done** | `pyproject.toml`, an `indras-net` CLI, GitHub Actions green on Python 3.10–3.13 |
-| Config / logging / operator guide | 🔴 **absent** | — |
+| Config / logging / operator guide | 🟢 **Phase 6 — done** | [`OPERATOR.md`](../OPERATOR.md); `run --json` + `ledger` observability; a standing red-team smoke suite |
 | Federation, replication, role-genesis, functional breadth, neuromorphic bus | 🔴 **documented, not implemented** | the honest "MVP scope" list in `reference/impl/README.md` |
 
 **The favourable position:** the seams are already clean and tested — `ModelAdapter`, the single `_execute` chokepoint, the ledger interface, the `HumanGate` interface. Each phase below is "fill in the real implementation behind a clean seam while keeping the proofs green," not a redesign.
@@ -96,6 +96,8 @@ Inter-swarm **federation**, controlled **self-replication**, open-ended **role-g
 | 3 — Persistence | **done** (durable ledger + memory; `verify()` holds across restarts; on-disk tamper detected) |
 | 4 — Real signing | **done** (Ed25519 optional extra; forged/tampered rejected; keys outside the model; signed checkpoint) |
 | 5 — Human gate transport | **done** (pluggable decider; interactive prompt; deny-by-default + fail-safe) |
-| 6 — Hardening & operator guide | **next** |
+| 6 — Hardening & operator guide | **done** ([`OPERATOR.md`](../OPERATOR.md); `--json` + `ledger` observability; red-team smoke suite) |
+
+**The downloadable-and-executable build (Phases 0–6) is complete.** A user can `pip install` it, point it at a local model, and have the swarm safely do real, confined, audited work — with durable, tamper-evident state, optional real signatures, a real human gate, and an operator guide. What remains is **the longer-horizon vision** (below) and **end-to-end empirical validation against an adaptive red team** — research, not packaging.
 
 Progress is recorded in [`CHANGELOG.md`](../CHANGELOG.md). The empirical/evidentiary status of every claim the design leans on is in [`docs/REFERENCES.md`](REFERENCES.md).

@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 # -- version + protocol constants -----------------------------------------
-__version__: str = "0.16.0"
+__version__: str = "0.17.0"
 SCHEMA_VERSION: str = "1.0.0"
 POLICY_VERSION: str = "1.0.0"
 
