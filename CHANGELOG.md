@@ -21,6 +21,22 @@ Nothing yet. Forthcoming work is tracked as **open problems** inside the relevan
 
 ---
 
+## [0.14.0] — 2026-06-24 — *Phase 3: durable, tamper-evident persistence*
+
+The ledger, and memory, now survive a restart — without weakening integrity. Opt-in; the in-memory path stays the default, so the proofs are untouched. No safety-floor or wire-contract change; **82 → 86 tests**.
+
+### Added
+- **`AkashaSutra` persistence** — an optional `path` makes each appended leaf a fresh, **fsync'd** JSONL line (append-only by construction), and `AkashaSutra.load(path, writer_did)` reconstructs the chain. `verify()` holds across a restart; an **on-disk edit to a past leaf breaks `verify()`**; a corrupt/unparseable line raises `TamperError` (a corrupted read is loud, never silent). The reconstructed chain is not auto-trusted — `verify()` is called after load.
+- **`SwarmMemory.save` / `load`** — atomic (`os.replace`) JSON persistence so per-interaction adaptation survives a restart; on reload it still only *avoids a previously-denied effect*, never grants a capability (a tested invariant).
+- **CLI:** `indras-net run --state DIR` persists the ledger + memory so successive runs continue (verified: run 1 → 3 leaves; run 2 *loads* them → 6 leaves, `verify()` True); `indras-net verify-ledger --state DIR | --ledger PATH` reports integrity and exits non-zero on tamper/corruption.
+
+### Honest residual
+- This is a hash-chain on a local file: a single-leaf edit (without recomputing the whole downstream chain) is detected, but a writer who rewrites **every** leaf can forge a self-consistent chain. The doc-04 defense for that — witness-cosigning + an external anchor, and a signed checkpoint — is future work (signing lands in Phase 4).
+
+`__version__` → 0.14.0. Roadmap synced: Phase 3 done; Phase 4 (real signing) next.
+
+---
+
 ## [0.13.0] — 2026-06-24 — *Phases 1 & 2: a real (untrusted) model + a sandboxed executor — Milestone A*
 
 The reference spine can now do real, confined work. Phase 1 wires an optional real model behind the existing untrusted-model seam; Phase 2 makes a gated effect actually run, **confined to a workspace it cannot escape**. Together they reach **Milestone A** — the first build that installs, points at a local model, and safely does a small real task. The new code was put through an adversarial red-team and hardened against every exploitable vector it found. No safety-floor or wire-contract change; the offline/mock path stays zero-dependency and is still the default; **55 → 82 tests**.

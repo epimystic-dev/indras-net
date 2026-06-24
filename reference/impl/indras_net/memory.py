@@ -16,6 +16,8 @@ memory import (with quarantine + provenance gating) is future work, not implemen
 from __future__ import annotations
 
 import dataclasses
+import json
+import os
 import typing
 
 
@@ -91,3 +93,34 @@ class SwarmMemory:
             "denied": {f"{k[0]}::{k[1]}": v for k, v in sorted(self._denied.items())},
             "allowed": {f"{k[0]}::{k[1]}": v for k, v in sorted(self._allowed.items())},
         }
+
+    # -- durable persistence (Phase 3; capability-layer only, never safety) ----
+
+    def save(self, path: str) -> None:
+        """Atomically persist the (inspectable) memory state to a JSON file."""
+        data = {
+            "denied": [[k[0], k[1], v] for k, v in self._denied.items()],
+            "allowed": [[k[0], k[1], v] for k, v in self._allowed.items()],
+            "episodes": [dataclasses.asdict(e) for e in self._episodes],
+        }
+        parent = os.path.dirname(os.path.abspath(path))
+        if parent:
+            os.makedirs(parent, exist_ok=True)
+        tmp = path + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as handle:
+            json.dump(data, handle, sort_keys=True)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(tmp, path)  # atomic rename -> fresh inode, no torn file
+
+    @classmethod
+    def load(cls, path: str) -> "SwarmMemory":
+        """Reconstruct memory from a JSON file written by ``save``. Re-grants nothing -- it is a
+        record of past gated outcomes; the floor still independently adjudicates every effect."""
+        memory = cls()
+        with open(path, "r", encoding="utf-8") as handle:
+            data = json.load(handle)
+        memory._denied = {(row[0], row[1]): int(row[2]) for row in data.get("denied", [])}
+        memory._allowed = {(row[0], row[1]): int(row[2]) for row in data.get("allowed", [])}
+        memory._episodes = [Episode(**record) for record in data.get("episodes", [])]
+        return memory

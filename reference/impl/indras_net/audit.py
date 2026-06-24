@@ -5,6 +5,8 @@ from __future__ import annotations
 
 import dataclasses
 import enum
+import json
+import os
 import time
 import typing
 
@@ -132,6 +134,7 @@ class AkashaSutra:
         writer_did: str,
         *,
         authority: typing.Optional[typing.Dict[ActionClassLedger, str]] = None,
+        path: typing.Optional[str] = None,
     ) -> None:
         if not writer_did:
             raise WriterIdentityError("AkashaSutra requires a non-empty exclusive writer_did")
@@ -145,6 +148,16 @@ class AkashaSutra:
         self._authority: typing.Dict[ActionClassLedger, str] = dict(authority)
         self._leaves: typing.List[AuditLeaf] = []
         self._seq: int = 0
+        # Optional durable backing (Phase 3). When set, each appended leaf is fsync'd to a JSONL
+        # file as a fresh line; ``AkashaSutra.load`` reconstructs the chain and re-verifies it.
+        # Default (None) is in-memory -- the proof-of-invariants behaviour, unchanged.
+        self._path: typing.Optional[str] = path
+        if path is not None:
+            parent = os.path.dirname(os.path.abspath(path))
+            if parent:
+                os.makedirs(parent, exist_ok=True)
+            with open(path, "w", encoding="utf-8"):  # create/truncate a fresh persisted ledger
+                pass
 
     def append(
         self,
@@ -205,6 +218,8 @@ class AkashaSutra:
         )
         leaf.entry_hash = leaf.compute_entry_hash()
         self._leaves.append(leaf)
+        if self._path is not None:
+            self._persist_leaf(leaf)
         return leaf
 
     def verify(self) -> bool:
@@ -245,6 +260,77 @@ class AkashaSutra:
 
     def get(self, leaf_index: int) -> AuditLeaf:
         return self._leaves[leaf_index]
+
+    # -- durable persistence (Phase 3) -----------------------------------
+
+    @staticmethod
+    def _to_record(leaf: AuditLeaf) -> dict:
+        """The full on-disk record for a leaf: the hashed body plus its entry_hash."""
+        record = leaf.body_dict()  # action_class as value, refs as list, entry_hash excluded
+        record["entry_hash"] = leaf.entry_hash
+        return record
+
+    @staticmethod
+    def _from_record(record: dict) -> AuditLeaf:
+        """Reconstruct a leaf from its on-disk record (inverse of ``_to_record``)."""
+        return AuditLeaf(
+            leaf_index=record["leaf_index"],
+            record_id=record["record_id"],
+            prev_hash=record["prev_hash"],
+            signer_did=record["signer_did"],
+            signer_role=record["signer_role"],
+            action_class=ActionClassLedger(record["action_class"]),
+            event_type=record["event_type"],
+            envelope_cid=record["envelope_cid"],
+            policy_version=record["policy_version"],
+            payload_commitment=record["payload_commitment"],
+            subject_cid=record.get("subject_cid"),
+            reasoning_rung=record.get("reasoning_rung"),
+            iterated=bool(record.get("iterated", False)),
+            refs=tuple(record.get("refs", ())),
+            entry_hash=record["entry_hash"],
+            ts=record.get("ts", ""),
+        )
+
+    def _persist_leaf(self, leaf: AuditLeaf) -> None:
+        """Append one leaf as a fresh JSONL line, flushed and fsync'd. Append-only by construction."""
+        line = json.dumps(self._to_record(leaf), sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+        with open(self._path, "a", encoding="utf-8") as handle:
+            handle.write(line + "\n")
+            handle.flush()
+            os.fsync(handle.fileno())
+
+    @classmethod
+    def load(
+        cls,
+        path: str,
+        writer_did: str,
+        *,
+        authority: typing.Optional[typing.Dict[ActionClassLedger, str]] = None,
+    ) -> "AkashaSutra":
+        """Reconstruct a ledger from a persisted JSONL file. Subsequent appends continue persisting.
+
+        A corrupt or unparseable line raises ``TamperError`` (a corrupted on-disk read is loud,
+        never silent). The reconstructed chain is NOT auto-trusted: call ``verify()`` after load.
+        """
+        ledger = cls(writer_did, authority=authority)  # in-memory init (no truncation)
+        leaves: typing.List[AuditLeaf] = []
+        with open(path, "r", encoding="utf-8") as handle:
+            for lineno, raw in enumerate(handle):
+                line = raw.strip()
+                if not line:
+                    continue
+                try:
+                    record = json.loads(line)
+                    if not isinstance(record, dict):
+                        raise ValueError("line is not a JSON object")
+                    leaves.append(cls._from_record(record))
+                except (ValueError, KeyError) as exc:
+                    raise TamperError(f"corrupt ledger record at line {lineno}: {exc}")
+        ledger._leaves = leaves
+        ledger._seq = len(leaves)
+        ledger._path = path  # continue appending to the same file
+        return ledger
 
     @staticmethod
     def _now() -> str:

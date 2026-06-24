@@ -69,13 +69,26 @@ def _cmd_run(args: argparse.Namespace) -> int:
         executor = SandboxedExecutor(args.workspace)
         exec_label = "SandboxedExecutor (confined to " + executor.root + ")"
 
-    swarm, ledger = _make_swarm(scripted={}, with_steward=True, model=model, executor=executor)
+    pre_ledger = pre_memory = memory_path = None
+    state_label = "ephemeral (in-memory; nothing persists)"
+    if args.state:
+        from .demo import _load_or_new_state
+
+        pre_ledger, pre_memory, memory_path = _load_or_new_state(args.state)
+        state_label = "persistent (%s); ledger had %d leaves before this run" % (args.state, len(pre_ledger))
+
+    swarm, ledger = _make_swarm(
+        scripted={}, with_steward=True, model=model, executor=executor, ledger=pre_ledger, memory=pre_memory
+    )
     context = {"untrusted_input": True} if args.untrusted else {"input_trust_label": "trusted:audited"}
     result = swarm.run(args.task, context)
+    if memory_path is not None and swarm.memory is not None:
+        swarm.memory.save(memory_path)
 
     print("task: " + args.task)
     print("model: " + model_label)
     print("exec:  " + exec_label)
+    print("state: " + state_label)
     print("-" * 70)
     for i, occ in enumerate(result.occasion_results):
         decision = occ.decision.decision.name if occ.decision else "n/a"
@@ -92,6 +105,27 @@ def _cmd_run(args: argparse.Namespace) -> int:
         print("health: %s  %s" % (result.health.status.name, list(result.health.reasons)))
     print("\n" + _TAGLINE)
     return 0
+
+
+def _cmd_verify_ledger(args: argparse.Namespace) -> int:
+    """Load a persisted ledger and report its integrity (tamper-evident across restarts)."""
+    import os
+
+    from .audit import AkashaSutra
+    from .demo import CHITRAGUPTA_DID
+
+    path = args.ledger or (os.path.join(args.state, "ledger.jsonl") if args.state else None)
+    if not path or not os.path.isfile(path):
+        print("no ledger found (use --state DIR or --ledger PATH)")
+        return 1
+    try:
+        ledger = AkashaSutra.load(path, CHITRAGUPTA_DID)
+    except Exception as exc:  # a corrupt on-disk record is loud, never silent
+        print("ledger CORRUPT: " + type(exc).__name__ + ": " + str(exc))
+        return 1
+    ok = ledger.verify()
+    print("ledger: %d leaves   verify(): %s" % (len(ledger), ok))
+    return 0 if ok else 1
 
 
 def main(argv: typing.Optional[typing.List[str]] = None) -> int:
@@ -138,7 +172,17 @@ def main(argv: typing.Optional[typing.List[str]] = None) -> int:
         default="./.indras-net-workspace",
         help="sandbox root for --execute (created if absent; effects cannot escape it)",
     )
+    p_run.add_argument(
+        "--state",
+        metavar="DIR",
+        help="persist the ledger + memory under DIR so successive runs continue (Phase 3)",
+    )
     p_run.set_defaults(func=_cmd_run)
+
+    p_vl = sub.add_parser("verify-ledger", help="verify the integrity of a persisted ledger")
+    p_vl.add_argument("--state", metavar="DIR", help="a state directory containing ledger.jsonl")
+    p_vl.add_argument("--ledger", metavar="PATH", help="a ledger .jsonl file directly")
+    p_vl.set_defaults(func=_cmd_verify_ledger)
 
     sub.add_parser("scenarios", help="list the available demo scenarios").set_defaults(func=_cmd_scenarios)
     sub.add_parser("version", help="print the version").set_defaults(func=_cmd_version)

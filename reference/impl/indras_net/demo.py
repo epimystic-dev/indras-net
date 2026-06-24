@@ -205,6 +205,8 @@ def _make_swarm(
     with_steward: bool = False,
     model=None,
     executor=None,
+    ledger=None,
+    memory=None,
 ):
     """Assemble a governance-issued swarm: Brahma + Vishwakarma + Yama + ledger.
 
@@ -223,11 +225,11 @@ def _make_swarm(
             adapter_id="adapter:family-B:mock", model_family="family-B"
         )
         checker = Narasimha(_build_checker_identity(), checker_model)
-    memory = SwarmMemory() if with_memory else None
+    memory = memory if memory is not None else (SwarmMemory() if with_memory else None)
     steward = ImmuneSteward() if with_steward else None
     human_gate = HumanGate(approvals or {}, default=HumanDecision.DENY)
     yama = Yama(EFFECT_REGISTRY, policy_version=POLICY_VERSION, human_gate=human_gate)
-    ledger = AkashaSutra(
+    ledger = ledger if ledger is not None else AkashaSutra(
         writer_did=CHITRAGUPTA_DID,
         authority={
             ActionClassLedger.ENFORCE_PASS: YAMA_DID,
@@ -249,6 +251,30 @@ def _make_swarm(
         executor=executor,
     )
     return swarm, ledger
+
+
+def _load_or_new_state(state_dir: str):
+    """Return (ledger, memory, memory_path) loaded from ``state_dir`` if present, else fresh + persisting.
+
+    The durable ledger keeps its hash-chain across restarts; ``AkashaSutra.load`` re-reads it and
+    ``verify()`` re-checks it. Memory adaptation persists too. Capability-layer only; the floor still
+    independently adjudicates every effect.
+    """
+    import os
+
+    ledger_path = os.path.join(state_dir, "ledger.jsonl")
+    memory_path = os.path.join(state_dir, "memory.json")
+    authority = {
+        ActionClassLedger.ENFORCE_PASS: YAMA_DID,
+        ActionClassLedger.ENFORCE_FAIL: YAMA_DID,
+        ActionClassLedger.HALT: VISHNU_DID,
+    }
+    if os.path.isfile(ledger_path):
+        ledger = AkashaSutra.load(ledger_path, CHITRAGUPTA_DID, authority=authority)
+    else:
+        ledger = AkashaSutra(writer_did=CHITRAGUPTA_DID, authority=authority, path=ledger_path)
+    memory = SwarmMemory.load(memory_path) if os.path.isfile(memory_path) else SwarmMemory()
+    return ledger, memory, memory_path
 
 
 def _print_run(result) -> None:
