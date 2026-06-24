@@ -191,13 +191,15 @@ def make_swarm(
     ceiling: RiskClass = RiskClass.B,
     with_checker: bool = False,
     with_steward: bool = False,
+    executor=None,
+    model=None,
 ):
     """Assemble a governance-issued swarm + ledger for end-to-end tests.
 
     with_checker=True wires a Narasimha independent checker on a different model family;
     with_steward=True wires a Dhanvantari immune steward that HALTs on a substrate breach.
     """
-    model = DeterministicMockModel(scripted=scripted)
+    model = model if model is not None else DeterministicMockModel(scripted=scripted)
     planner = BrahmaPlanner(planner_identity(), model)
     builder = VishwakarmaBuilder(builder_identity(grants, ceiling=ceiling), model)
     checker = None
@@ -227,6 +229,7 @@ def make_swarm(
         collective=CollectiveVitalSigns(),
         checker=checker,
         steward=steward,
+        executor=executor,
     )
     return swarm, ledger
 

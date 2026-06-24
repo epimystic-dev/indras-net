@@ -14,12 +14,12 @@ The reference implementation (`reference/impl/`) is a **runnable harness that pr
 | Layer | Status | Evidence |
 |---|---|---|
 | Safety invariants — floor non-bypass, deny-default, capability confinement, tamper-evident audit, exclusive-writer, honesty-form, HALT, Rule-of-Two | ✅ **real & proven** | the test suite (the invariant spine) |
-| The model | 🟡 **mock only** | `model.py`: `ModelAdapter` seam + `DeterministicMockModel` (no real adapter) |
-| Effect execution (the "hands") | 🟡 **stub** | `runtime._execute()` is the sole execution site but performs **no real I/O** — returns a receipt |
+| The model | 🟢 **Phase 1 — real adapter (optional)** | `HttpChatModel` (untrusted, vendor-neutral) over any chat-completions HTTP API; a malicious proposal is still denied; the mock stays the default |
+| Effect execution (the "hands") | 🟢 **Phase 2 — sandboxed (optional)** | `SandboxedExecutor`: path-confined, no network/subprocess, red-team-hardened; the receipt stub stays the default |
 | Persistence | 🔴 **none** | `audit.py`: the ledger is an in-memory list; nothing survives a restart |
 | Cryptographic signing (the "lock") | 🟡 **keyed-hash stand-in** | `canon.detached_sig` = `SHA-256(did ‖ bytes)`, explicitly an "MVP origin stand-in" |
 | Human-in-the-loop gate | 🟡 **stub** | `floor.HumanGate` is deny-by-default with a pre-seeded approvals map; no transport |
-| Packaging / CLI / install / CI | 🟡 **Phase 0** | added in Phase 0 (this milestone): `pyproject.toml`, an `indras-net` CLI, GitHub Actions |
+| Packaging / CLI / install / CI | 🟢 **Phase 0 — done** | `pyproject.toml`, an `indras-net` CLI, GitHub Actions green on Python 3.10–3.13 |
 | Config / logging / operator guide | 🔴 **absent** | — |
 | Federation, replication, role-genesis, functional breadth, neuromorphic bus | 🔴 **documented, not implemented** | the honest "MVP scope" list in `reference/impl/README.md` |
 
@@ -90,10 +90,10 @@ Inter-swarm **federation**, controlled **self-replication**, open-ended **role-g
 
 | Phase | State |
 |---|---|
-| 0 — Packaging, CLI, CI | **in progress / landed this milestone** |
-| 1 — Real model adapter | next |
-| 2 — Sandboxed execution | planned (→ Milestone A) |
-| 3 — Persistence | planned |
+| 0 — Packaging, CLI, CI | **done** (CI green on Python 3.10–3.13) |
+| 1 — Real model adapter | **done** (`HttpChatModel`; malicious output denied end-to-end; mock is the default) |
+| 2 — Sandboxed execution | **done → Milestone A reached** (path-confined, no network/subprocess, adversarially red-team-hardened) |
+| 3 — Persistence | **next** |
 | 4 — Real signing | planned |
 | 5 — Human gate transport | planned |
 | 6 — Hardening & operator guide | planned |

@@ -21,6 +21,25 @@ Nothing yet. Forthcoming work is tracked as **open problems** inside the relevan
 
 ---
 
+## [0.13.0] — 2026-06-24 — *Phases 1 & 2: a real (untrusted) model + a sandboxed executor — Milestone A*
+
+The reference spine can now do real, confined work. Phase 1 wires an optional real model behind the existing untrusted-model seam; Phase 2 makes a gated effect actually run, **confined to a workspace it cannot escape**. Together they reach **Milestone A** — the first build that installs, points at a local model, and safely does a small real task. The new code was put through an adversarial red-team and hardened against every exploitable vector it found. No safety-floor or wire-contract change; the offline/mock path stays zero-dependency and is still the default; **55 → 82 tests**.
+
+### Added — Phase 1: a real, UNTRUSTED model adapter
+- **`HttpChatModel`** — an optional `ModelAdapter` over any standard chat-completions HTTP API (stdlib `urllib`; the transport is injectable so tests need no network). It is **vendor-neutral** (endpoint / model / key are caller config; no product is named) and **untrusted by construction**: a malformed or hostile response is parsed defensively into a proposal or a safe no-op, and whatever effect is proposed passes **through unchanged** to the floor — the adapter never sanitizes a hostile proposal, it only refuses to crash.
+- **Gate proven:** a deliberately-malicious output (proposing a forbidden `code.deploy.production`) is **denied end-to-end and never executes**; malformed / deeply-nested / megabyte-sized output is a safe no-op.
+
+### Added — Phase 2: capability-scoped sandboxed execution
+- **`SandboxedExecutor`** (+ `StubExecutor`) wired behind the single `_execute` chokepoint (the default stays the side-effect-free receipt, preserving the proofs). When configured, a gated filesystem effect is **path-confined to one workspace root**, with **no network and no subprocess** — absolute paths, `..`, symlink-out, the root itself, reserved device names, colon/ADS names, trailing-dot/space names, over-deep/over-long paths, and over-size or non-text content are all **refused**. The CLI gains `--execute --workspace DIR` and `--model-endpoint / --model / --model-key-env`.
+- **Milestone A:** `indras-net run --execute --workspace <dir>` does a real, confined write; verified nothing escapes the sandbox.
+
+### Hardened (adversarial red-team)
+- A four-lens red-team found that the executor caught only `SandboxViolation`, so untrusted-model-controlled args could raise an uncaught `OSError`/`TypeError`/`ValueError`/`RecursionError` that crashed the run **and tore the audit** (floor leaf written, output leaf not), plus a `bytes(int)` confused-deputy zero-fill and device/ADS/trailing-dot aliasing. **Fixed:** `execute()` turns any handler fault into a refusal (never propagates); `runtime._execute` wraps the executor call as defense-in-depth; `_write` strictly coerces content (text or bytes only); `_confine` rejects colons / reserved names / trailing-dot-space / over-deep paths *before* any OS call; the adapter restricts `base_url` to http(s) and bounds its JSON scan. The confinement **predicate** itself was found sound (no escape outside the root). The one honest residual — a TOCTOU symlink race, out of scope for the single-tenant model-only threat model — is documented in `execution.py`.
+
+`__version__` → 0.13.0.
+
+---
+
 ## [0.12.0] — 2026-06-24 — *Phase 0: packaging, a CLI, and CI*
 
 The first step of the implementation roadmap ([`docs/IMPLEMENTATION_ROADMAP.md`](docs/IMPLEMENTATION_ROADMAP.md)): turn the reference spine from "a folder you run scripts in" into "a package you install and a command you run." No safety-floor or wire-contract change; the model is still the deterministic mock (a real adapter is Phase 1); **55 tests stay green**.

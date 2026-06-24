@@ -36,15 +36,46 @@ def _cmd_demo(args: argparse.Namespace) -> int:
 
 
 def _cmd_run(args: argparse.Namespace) -> int:
-    """Run a single task through a mock-model swarm and print the gated outcome + audit summary."""
+    """Run a single task through the gated harness and print the outcome + audit summary.
+
+    By default the model is the deterministic mock and effects are NOT executed (a
+    side-effect-free receipt). ``--model-endpoint`` wires a real, UNTRUSTED model; ``--execute``
+    wires a SandboxedExecutor confined to ``--workspace`` so a gated effect actually runs --
+    confined, so it cannot touch the wider system.
+    """
+    import os
+
     from .demo import _make_swarm  # reuse the reference swarm factory
 
-    swarm, ledger = _make_swarm(scripted={}, with_steward=True)
+    model = None
+    model_label = "DeterministicMockModel (mock; no network)"
+    if args.model_endpoint:
+        from .model_http import HttpChatModel
+
+        key = os.environ.get(args.model_key_env) if args.model_key_env else None
+        model = HttpChatModel(
+            base_url=args.model_endpoint,
+            model=(args.model or "default"),
+            api_key=key,
+            model_family="family-remote",
+        )
+        model_label = "HttpChatModel (UNTRUSTED remote; gated by the floor)"
+
+    executor = None
+    exec_label = "stub (no I/O -- a gated effect produces a receipt only)"
+    if args.execute:
+        from .execution import SandboxedExecutor
+
+        executor = SandboxedExecutor(args.workspace)
+        exec_label = "SandboxedExecutor (confined to " + executor.root + ")"
+
+    swarm, ledger = _make_swarm(scripted={}, with_steward=True, model=model, executor=executor)
     context = {"untrusted_input": True} if args.untrusted else {"input_trust_label": "trusted:audited"}
     result = swarm.run(args.task, context)
 
     print("task: " + args.task)
-    print("model: DeterministicMockModel (Phase 0 -- no real model yet; see docs/IMPLEMENTATION_ROADMAP.md)")
+    print("model: " + model_label)
+    print("exec:  " + exec_label)
     print("-" * 70)
     for i, occ in enumerate(result.occasion_results):
         decision = occ.decision.decision.name if occ.decision else "n/a"
@@ -78,12 +109,34 @@ def main(argv: typing.Optional[typing.List[str]] = None) -> int:
     )
     p_demo.set_defaults(func=_cmd_demo)
 
-    p_run = sub.add_parser("run", help="run a single task through the gated harness (mock model in Phase 0)")
+    p_run = sub.add_parser("run", help="run a single task through the gated harness")
     p_run.add_argument("task", help="the task for the swarm to attempt")
     p_run.add_argument(
         "--untrusted",
         action="store_true",
         help="mark the input as untrusted (exercises the Rule-of-Two / quarantine path)",
+    )
+    p_run.add_argument(
+        "--model-endpoint",
+        metavar="URL",
+        help="use a real, UNTRUSTED model at this chat-completions HTTP endpoint (default: the mock)",
+    )
+    p_run.add_argument("--model", metavar="NAME", help="model name to request at --model-endpoint")
+    p_run.add_argument(
+        "--model-key-env",
+        metavar="VAR",
+        help="name of an environment variable holding the API key (never pass the key on the command line)",
+    )
+    p_run.add_argument(
+        "--execute",
+        action="store_true",
+        help="actually run gated effects, CONFINED to --workspace (default: a side-effect-free receipt)",
+    )
+    p_run.add_argument(
+        "--workspace",
+        metavar="DIR",
+        default="./.indras-net-workspace",
+        help="sandbox root for --execute (created if absent; effects cannot escape it)",
     )
     p_run.set_defaults(func=_cmd_run)
 

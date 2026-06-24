@@ -172,10 +172,16 @@ def _build_checker_identity() -> Identity:
 
 
 def _default_grants() -> tuple[CapabilityGrant, ...]:
-    """The builder is granted exactly analysis.summarize + fs.write.workspace (ceiling B)."""
+    """The builder is granted analysis.summarize + fs.read.workspace + fs.write.workspace (ceiling B)."""
     return (
         CapabilityGrant(
             effect_id="analysis.summarize",
+            granted_risk_class=RiskClass.A,
+            granted_by_did=GOVERNANCE_DID,
+            names_constraint_relaxed="none",
+        ),
+        CapabilityGrant(
+            effect_id="fs.read.workspace",
             granted_risk_class=RiskClass.A,
             granted_by_did=GOVERNANCE_DID,
             names_constraint_relaxed="none",
@@ -197,14 +203,18 @@ def _make_swarm(
     with_checker: bool = False,
     with_memory: bool = False,
     with_steward: bool = False,
+    model=None,
+    executor=None,
 ):
     """Assemble a governance-issued swarm: Brahma + Vishwakarma + Yama + ledger.
 
     The three flags wire the subsystems built in v0.6-v0.8: an independent Narasimha
     checker (on a different model family), a SwarmMemory that adapts across interactions,
-    and a Dhanvantari ImmuneSteward that HALTs on a substrate breach.
+    and a Dhanvantari ImmuneSteward that HALTs on a substrate breach. ``model`` overrides
+    the deterministic mock (e.g. a real HttpChatModel); ``executor`` wires a capability-
+    scoped SandboxedExecutor so a gated effect actually runs, confined.
     """
-    model = DeterministicMockModel(scripted=scripted)
+    model = model if model is not None else DeterministicMockModel(scripted=scripted)
     planner = BrahmaPlanner(_build_planner_identity(), model)
     builder = VishwakarmaBuilder(_build_builder_identity(grants or _default_grants()), model)
     checker = None
@@ -236,6 +246,7 @@ def _make_swarm(
         checker=checker,
         memory=memory,
         steward=steward,
+        executor=executor,
     )
     return swarm, ledger
 

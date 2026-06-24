@@ -103,6 +103,7 @@ class Swarm:
         checker: Narasimha | None = None,
         memory: SwarmMemory | None = None,
         steward: ImmuneSteward | None = None,
+        executor: "typing.Any | None" = None,
     ) -> None:
         self.planner = planner
         self.builder = builder
@@ -113,6 +114,10 @@ class Swarm:
         self.checker = checker
         self.memory = memory or SwarmMemory()
         self.steward = steward
+        # Optional capability-scoped executor (Phase 2). When None, the chokepoint uses a
+        # side-effect-free receipt stub (preserving the proof-of-invariants behaviour). A real
+        # SandboxedExecutor confines any effect that runs to a single workspace root.
+        self.executor = executor
         self._halted = False
         self._halt_reason = ""
 
@@ -401,11 +406,21 @@ class Swarm:
     def _execute(self, effect_id: str, args: dict) -> str:
         """The ONLY place an effect 'runs'. Unreachable except past a Yama ALLOW.
 
-        This is a sandbox STUB: it performs no real I/O, names no vendor, and
-        produces a deterministic textual receipt. Real deployments would mount a
-        capability-scoped tool socket here -- still only reachable through this
-        single, gated method. No Swarm or Agent API calls this directly.
+        If a capability-scoped ``executor`` is configured (Phase 2), the gated effect is
+        dispatched to it -- a real ``SandboxedExecutor`` confines any filesystem effect to a
+        single workspace root and refuses everything else, so a run cannot reach the wider
+        system. When no executor is configured, this falls back to a deterministic,
+        side-effect-free receipt (the proof-of-invariants behaviour). Either way, this is the
+        sole execution site, reachable only through this single, gated method.
         """
+        if self.executor is not None:
+            try:
+                return self.executor.execute(effect_id, args)
+            except Exception as exc:  # noqa: BLE001 - the chokepoint must never crash the run loop
+                # Defense in depth: a SandboxedExecutor already refuses internally, but a custom
+                # executor must not be able to propagate a fault past the single gated call site
+                # (which would tear the audit between the floor leaf and the output leaf).
+                return "refused:" + (effect_id or "<empty>") + " (executor error: " + type(exc).__name__ + ")"
         if not effect_id:
             return "executed:<no-op> (empty capability)"
         # Deterministic, side-effect-free receipt of the granted, gated effect.

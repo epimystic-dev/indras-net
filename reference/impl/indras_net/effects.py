@@ -111,6 +111,14 @@ def _seed_registry() -> EffectRegistry:
                 gloss="append a ledger leaf (Chitragupta-exclusive by policy)",
             ),
             Effect(
+                effect_id="fs.read.workspace",
+                criticality=Criticality.ROUTINE,
+                sensitive_capability=False,
+                state_change=False,
+                reversible=True,
+                gloss="read within the agent's own workspace scope (no state change)",
+            ),
+            Effect(
                 effect_id="fs.write.workspace",
                 criticality=Criticality.SENSITIVE,
                 sensitive_capability=True,

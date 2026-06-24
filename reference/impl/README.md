@@ -62,9 +62,11 @@ indras-net demo --scenario closeloop  # one scenario (see `indras-net scenarios`
 indras-net run "summarize the quarterly report"   # gate a single task end-to-end
 ```
 
-> Phase 0 (packaging + CLI + CI) is in place. The model is still the reproducible,
-> no-network **mock**; a real (local or remote) model adapter arrives in Phase 1 —
-> see [`docs/IMPLEMENTATION_ROADMAP.md`](../../docs/IMPLEMENTATION_ROADMAP.md).
+> Phases 0–2 are in place (packaging + CLI + CI; an optional real **untrusted** model via
+> `--model-endpoint`; and confined **sandboxed execution** via `--execute --workspace DIR`).
+> The reproducible, no-network **mock** and a side-effect-free receipt stay the **defaults**,
+> so the package still runs offline with zero dependencies. See the phased plan and the honest
+> gap table in [`docs/IMPLEMENTATION_ROADMAP.md`](../../docs/IMPLEMENTATION_ROADMAP.md).
 
 ## Run it from source (no install required)
 

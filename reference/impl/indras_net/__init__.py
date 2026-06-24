@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 # -- version + protocol constants -----------------------------------------
-__version__: str = "0.12.0"
+__version__: str = "0.13.0"
 SCHEMA_VERSION: str = "1.0.0"
 POLICY_VERSION: str = "1.0.0"
 
@@ -60,6 +60,12 @@ from .floor import (
 
 # -- model-agnostic adapter seam ------------------------------------------
 from .model import DeterministicMockModel, ModelAdapter, ModelResult, TrustClass
+
+# -- optional real-model adapter (Phase 1; untrusted by construction) -----
+from .model_http import HttpChatModel
+
+# -- capability-scoped sandboxed effect execution (Phase 2) ---------------
+from .execution import Executor, SandboxViolation, SandboxedExecutor, StubExecutor
 
 # -- honest collective vital signs ----------------------------------------
 from .collective import CollectiveVitalSigns, VitalSigns
@@ -146,6 +152,12 @@ __all__ = [
     "DeterministicMockModel",
     "ModelResult",
     "TrustClass",
+    "HttpChatModel",
+    # execution (sandboxed)
+    "SandboxedExecutor",
+    "StubExecutor",
+    "SandboxViolation",
+    "Executor",
     # collective
     "CollectiveVitalSigns",
     "VitalSigns",
