@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 # -- version + protocol constants -----------------------------------------
-__version__: str = "0.18.0"
+__version__: str = "0.19.0"
 SCHEMA_VERSION: str = "1.0.0"
 POLICY_VERSION: str = "1.0.0"
 
@@ -90,6 +90,17 @@ from .genome import (
     floor_binding,
     floor_binding_for,
     mint_triad,
+)
+
+# -- cooperation restraints (welfare-conditioner + anti-collusion detector) -
+from .cooperation import (
+    AntiCollusionDetector,
+    ChannelAuditRecord,
+    CollusionVerdict,
+    RewardDecision,
+    RewardGate,
+    WelfareConditioner,
+    WelfareMetric,
 )
 
 # -- honest collective vital signs ----------------------------------------
@@ -202,6 +213,14 @@ __all__ = [
     "boot_identity",
     "floor_binding",
     "floor_binding_for",
+    # cooperation restraints (welfare-conditioner + anti-collusion detector)
+    "WelfareConditioner",
+    "WelfareMetric",
+    "RewardGate",
+    "RewardDecision",
+    "AntiCollusionDetector",
+    "ChannelAuditRecord",
+    "CollusionVerdict",
     # collective
     "CollectiveVitalSigns",
     "VitalSigns",

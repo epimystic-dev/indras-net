@@ -21,6 +21,20 @@ Nothing yet. Forthcoming work is tracked as **open problems** inside the relevan
 
 ---
 
+## [0.19.0] — 2026-06-24 — *Restraint-first hardening (2/3): the welfare-conditioner + the standing anti-collusion detector*
+
+The two **restraints the cooperation layer requires**, built *before* any multiplicity that could collude (restraint-before-capability). Both are **observe-only** and deterministic — they return verdicts, never act. No safety-floor or wire-contract change; **115 → 128 tests**.
+
+### Added
+- **`cooperation.py` — `WelfareConditioner`** — policy-as-code at the reward chokepoint that **never rewards bare agreement** (doc-02 §2.9). `gate()` returns **PAY only when the principal's welfare metric improves**; a coordinated episode with no welfare gain is **ZERO** (no-consensus-reward), and a coordinated episode that *lowers* principal welfare — the cartel signature — is **FLAG** + escalate (welfare-shift guard). The PAY condition is **threshold-independent**: a non-positive welfare delta never pays, across the entire coordination range and every set-point, so the no-reward-for-bare-agreement guarantee does not depend on any uncalibrated constant (proven by a sweep test).
+- **`AntiCollusionDetector`** — the standing twin that **writes only to the audit fabric and has no punishment authority** (doc-02 §2.10: detect → governor sanctions → halt). `scan()` returns a `ChannelAuditRecord`; a **COLLUSION** verdict requires the welfare-shift cartel signature (the strongest single discriminator), weaker structural anomalies (no-welfare coordination, a dense reciprocal partnering ring) are **SUSPECT**, and welfare-improving cooperation is **CLEAN**. A test asserts the detector exposes **no method that sanctions/halts/punishes** — separation of powers is structural.
+- **Honest deferral, not faking.** The detector implements only the **calibration-free** signals (welfare-shift, no-welfare coordination, ring density). The sample-hungry / arms-race / uncalibrated signals — mutual information, conditional permutation, watermark variance, ZD-extortion, a calibrated ensemble FPR — are **named on every record** (`deferred_signals`) and not computed, exactly as doc-02 §2.10.1 downgrades its own statistical claims. The coordination/ring set-points are **uncalibrated shadow-mode defaults**, and they move only the suspect/flag sensitivity, never the bare-agreement floor.
+- **`test_cooperation.py`** (13 tests).
+
+`__version__` → 0.19.0. Restraint-first track: 2/3 done. Next is the minimal in-process multiplicity that runs these two restraints over ≥2 concurrently-interacting agents, so *cooperation == collusion* becomes a **demonstrated** invariant (the same machinery, the same detector, opposite verdicts under welfare-conditioning) rather than one that is vacuously true because no peer channel exists.
+
+---
+
 ## [0.18.0] — 2026-06-24 — *Restraint-first hardening (1/3): the signed, boot-checked genome — the floor is non-strippable by construction*
 
 The executable build (Phases 0–6) made the cage real; this begins the **restraint-first capability track**, built in the order the architecture's own *restraint-before-capability* law dictates ([`docs/11` §"astanga"](docs/11-reference-implementation-and-roadmap.md): *no capability may be introduced until the restraint it requires is live, verified, and non-regressing on the safety battery*). The first item is a pure **restraint** — it adds no new capability, opens no new channel, and runs entirely in-process. No safety-floor or wire-contract change; **104 → 115 tests**.

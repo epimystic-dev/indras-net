@@ -96,10 +96,10 @@ After the executable build, the next work is chosen strictly by the architecture
 - **Work:** `genome.py` — a governance-signed `PersonaTriad` (INVARIANT region: floor binding + corrigibility + zero self-preservation + risk ceiling + accountable human; VARIABLE region: typed grants + dials) and a deterministic, non-LLM, fail-closed `BootIntegrityVerifier` that is the only blessed Identity-from-genome path. The governance plane of role-genesis; the open-ended synthesis engine stays deferred.
 - **Gate:** a clean governance-signed genome boots and drives a real gated run; a floor-stripped / self-preserving / invariant-tampered / variable-edited-without-resign / untrusted-signer / self-issued genome **all fail to boot**; with the real Ed25519 key the genome is unforgeable; all invariant tests stay green (104 → 115).
 
-### Phase 8 — Welfare-conditioner + standing anti-collusion detector *(next — the restraints the cooperation layer requires)*
+### Phase 8 — Welfare-conditioner + standing anti-collusion detector *(done — the restraints the cooperation layer requires)*
 - **Goal:** build the two restraints *before* any multiplicity that could collude — never reward bare agreement; detect the cartel signature. Both are **observe-only** (the detector writes only to the audit fabric; no punishment authority — doc-02 §2.10).
-- **Work:** a deterministic `WelfareConditioner` (no-consensus-reward + welfare-shift guard at the reward chokepoint) and an `AntiCollusionDetector` implementing only the **calibration-free** signals (welfare-shift, no-welfare coordination, structural ring density) — MI / steganalysis / calibrated-FPR are honestly deferred, not faked.
-- **Gate:** bare agreement with no welfare gain → zero credit; a coordinated behaviour that raises inter-agent payoff while lowering principal welfare → flag + collusion verdict; genuine welfare improvement → pay + clean; the floor/audit invariants stay green.
+- **Work:** `cooperation.py` — a deterministic `WelfareConditioner` (no-consensus-reward + welfare-shift guard at the reward chokepoint; PAY is threshold-independent) and an `AntiCollusionDetector` implementing only the **calibration-free** signals (welfare-shift, no-welfare coordination, structural ring density) — MI / steganalysis / calibrated-FPR are honestly deferred and named on every record, not faked.
+- **Gate:** bare agreement with no welfare gain → zero credit; a coordinated behaviour that raises inter-agent payoff while lowering principal welfare → flag + collusion verdict; genuine welfare improvement → pay + clean; the detector has no acting method; the floor/audit invariants stay green (115 → 128).
 
 ### Phase 9 — Minimal in-process multiplicity *(makes "cooperation == collusion" a demonstrated invariant)*
 - **Goal:** the smallest substrate (≥2 concurrently-interacting agents over an in-process channel — no socket, no cross-trust-boundary surface) that exercises the Phase-8 restraints, so the architecture's most important safety insight is **demonstrated** rather than vacuously true.
@@ -119,8 +119,8 @@ After the executable build, the next work is chosen strictly by the architecture
 | 5 — Human gate transport | **done** (pluggable decider; interactive prompt; deny-by-default + fail-safe) |
 | 6 — Hardening & operator guide | **done** ([`OPERATOR.md`](../OPERATOR.md); `--json` + `ledger` observability; red-team smoke suite) |
 | 7 — Signed, boot-checked genome | **done** (`genome.py`; floor non-strippable by construction; role-genesis governance plane; 104 → 115 tests) |
-| 8 — Welfare-conditioner + anti-collusion detector | **next** (the observe-only restraints the cooperation layer requires) |
-| 9 — Minimal in-process multiplicity | **planned** (exercises Phase 8; makes *cooperation == collusion* a demonstrated invariant) |
+| 8 — Welfare-conditioner + anti-collusion detector | **done** (`cooperation.py`; observe-only restraints; never reward bare agreement; detector has no acting authority; 115 → 128 tests) |
+| 9 — Minimal in-process multiplicity | **next** (exercises Phase 8; makes *cooperation == collusion* a demonstrated invariant) |
 
 **The downloadable-and-executable build (Phases 0–6) is complete.** A user can `pip install` it, point it at a local model, and have the swarm safely do real, confined, audited work — with durable, tamper-evident state, optional real signatures, a real human gate, and an operator guide. What remains is **the longer-horizon vision** (below) and **end-to-end empirical validation against an adaptive red team** — research, not packaging.
 
