@@ -70,11 +70,13 @@ class PolicyDecision:
 
 
 class HumanGate:
-    """Deny-by-default human-gate stub for Rule-of-Two escalations.
+    """Deny-by-default human gate for Rule-of-Two escalations, with a pluggable transport.
 
-    ``approvals`` maps an effect_id (or action_id) to an explicit HumanDecision; anything not
-    present resolves to ``default`` (DENY). In the MVP there is no live human in the loop, so the
-    default refusal is the safe, load-bearing behavior.
+    Resolution order: a pre-seeded ``approvals`` entry (keyed by action_id, else effect_id); else
+    a ``decider`` transport (Phase 5) -- a callable ``(effect_id, context) -> HumanDecision`` that
+    reaches an actual human; else ``default`` (DENY). The transport is **fail-safe**: any exception,
+    or a non-``HumanDecision`` return, resolves to DENY, so a broken or absent human-in-the-loop can
+    never accidentally approve a consequential action.
     """
 
     def __init__(
@@ -82,18 +84,55 @@ class HumanGate:
         approvals: typing.Optional[typing.Dict[str, HumanDecision]] = None,
         *,
         default: HumanDecision = HumanDecision.DENY,
+        decider: typing.Optional[typing.Callable[[str, dict], "HumanDecision"]] = None,
     ) -> None:
         self._approvals: typing.Dict[str, HumanDecision] = dict(approvals or {})
         self._default = default
+        self._decider = decider
 
     def request(self, effect_id: str, context: dict) -> HumanDecision:
-        # Prefer an action_id-keyed approval if present, else effect_id, else default-deny.
+        # Prefer an action_id-keyed approval if present, else effect_id.
         action_id = context.get("action_id") if isinstance(context, dict) else None
         if action_id is not None and action_id in self._approvals:
             return self._approvals[action_id]
         if effect_id in self._approvals:
             return self._approvals[effect_id]
+        if self._decider is not None:
+            try:
+                decision = self._decider(effect_id, context if isinstance(context, dict) else {})
+            except Exception:  # noqa: BLE001 - a transport fault must fail SAFE (deny), never approve
+                return HumanDecision.DENY
+            return decision if isinstance(decision, HumanDecision) else HumanDecision.DENY
         return self._default
+
+
+def interactive_human_decider(*, stream: typing.Any = None) -> typing.Callable[[str, dict], HumanDecision]:
+    """A human-gate transport that asks the operator on a TTY. Non-interactive input -> DENY.
+
+    Deny-by-default is load-bearing: if stdin is not a terminal (a pipe, CI, a daemon), there is no
+    human to ask, so the answer is DENY. On a TTY it prompts and approves only on an explicit 'y'.
+    A wall-clock timeout on a live prompt is a future refinement; the non-interactive deny already
+    covers the 'no human available' case.
+    """
+    import sys
+
+    out = stream if stream is not None else sys.stderr
+
+    def decider(effect_id: str, context: dict) -> HumanDecision:
+        if not getattr(sys.stdin, "isatty", lambda: False)():
+            return HumanDecision.DENY  # no human at the keyboard -> fail safe
+        scope = {k: context.get(k) for k in ("task_id", "blast_radius") if isinstance(context, dict)}
+        out.write("\n[HUMAN GATE] Rule-of-Two triggered for effect %r\n" % effect_id)
+        out.write("  (untrusted_input + sensitive_capability + state_change all hold) scope=%s\n" % scope)
+        out.write("  approve this action? [y/N]: ")
+        out.flush()
+        try:
+            answer = sys.stdin.readline().strip().lower()
+        except Exception:  # noqa: BLE001
+            return HumanDecision.DENY
+        return HumanDecision.APPROVE if answer in ("y", "yes") else HumanDecision.DENY
+
+    return decider
 
 
 @dataclasses.dataclass(frozen=True)

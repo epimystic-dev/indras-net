@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 # -- version + protocol constants -----------------------------------------
-__version__: str = "0.15.0"
+__version__: str = "0.16.0"
 SCHEMA_VERSION: str = "1.0.0"
 POLICY_VERSION: str = "1.0.0"
 
@@ -56,6 +56,7 @@ from .floor import (
     PolicyDecision,
     RuleOfTwo,
     Yama,
+    interactive_human_decider,
 )
 
 # -- model-agnostic adapter seam ------------------------------------------
@@ -156,6 +157,7 @@ __all__ = [
     "HumanGate",
     "HumanDecision",
     "RuleOfTwo",
+    "interactive_human_decider",
     "FloorError",
     # model
     "ModelAdapter",

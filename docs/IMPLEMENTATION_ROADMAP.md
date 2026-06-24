@@ -18,7 +18,7 @@ The reference implementation (`reference/impl/`) is a **runnable harness that pr
 | Effect execution (the "hands") | 🟢 **Phase 2 — sandboxed (optional)** | `SandboxedExecutor`: path-confined, no network/subprocess, red-team-hardened; the receipt stub stays the default |
 | Persistence | 🟢 **Phase 3 — durable (optional)** | `AkashaSutra.load`/`path` (JSONL, fsync'd) + `SwarmMemory.save`/`load`; the chain stays tamper-evident across restarts; in-memory is still the default |
 | Cryptographic signing (the "lock") | 🟢 **Phase 4 — real (optional extra)** | `signing.Ed25519Signer` (real detached signatures; `pip install indras-net[crypto]`) + a signed-head checkpoint that detects a ledger rewrite; the keyed-hash stand-in stays the zero-dep default |
-| Human-in-the-loop gate | 🟡 **stub** | `floor.HumanGate` is deny-by-default with a pre-seeded approvals map; no transport |
+| Human-in-the-loop gate | 🟢 **Phase 5 — real transport (optional)** | `HumanGate` takes a pluggable decider; `interactive_human_decider` prompts the operator (`--human-prompt`); fail-safe (error/non-interactive → deny); deny-by-default stays the default |
 | Packaging / CLI / install / CI | 🟢 **Phase 0 — done** | `pyproject.toml`, an `indras-net` CLI, GitHub Actions green on Python 3.10–3.13 |
 | Config / logging / operator guide | 🔴 **absent** | — |
 | Federation, replication, role-genesis, functional breadth, neuromorphic bus | 🔴 **documented, not implemented** | the honest "MVP scope" list in `reference/impl/README.md` |
@@ -95,7 +95,7 @@ Inter-swarm **federation**, controlled **self-replication**, open-ended **role-g
 | 2 — Sandboxed execution | **done → Milestone A reached** (path-confined, no network/subprocess, adversarially red-team-hardened) |
 | 3 — Persistence | **done** (durable ledger + memory; `verify()` holds across restarts; on-disk tamper detected) |
 | 4 — Real signing | **done** (Ed25519 optional extra; forged/tampered rejected; keys outside the model; signed checkpoint) |
-| 5 — Human gate transport | **next** |
-| 6 — Hardening & operator guide | planned |
+| 5 — Human gate transport | **done** (pluggable decider; interactive prompt; deny-by-default + fail-safe) |
+| 6 — Hardening & operator guide | **next** |
 
 Progress is recorded in [`CHANGELOG.md`](../CHANGELOG.md). The empirical/evidentiary status of every claim the design leans on is in [`docs/REFERENCES.md`](REFERENCES.md).

@@ -21,6 +21,22 @@ Nothing yet. Forthcoming work is tracked as **open problems** inside the relevan
 
 ---
 
+## [0.16.0] — 2026-06-24 — *Phase 5: a real human-gate transport*
+
+A Rule-of-Two action can now actually wait for a human — and still defaults to deny when there is no human to ask. No safety-floor or wire-contract change; **95 → 103 tests**.
+
+### Added
+- **`HumanGate` gains a pluggable decider transport.** Resolution order is unchanged-and-safe: a pre-seeded approval, then a `decider(effect_id, context) -> HumanDecision` transport, then `default` (DENY). The transport is **fail-safe**: any exception or a non-`HumanDecision` return resolves to DENY, so a broken or absent human-in-the-loop can never accidentally approve a consequential action.
+- **`interactive_human_decider`** — a transport that prompts the operator on a TTY and approves only on an explicit `y`. **Non-interactive input (a pipe, CI, a daemon) denies**, because there is no human to ask. CLI: `indras-net run --human-prompt`.
+- **Gate proven end-to-end:** a full Rule-of-Two triad (untrusted_input + sensitive_capability + state_change) **runs only when the transport approves** (allow-with-obligations), and never runs on deny, on a transport error, or with no human in the loop — each outcome audited.
+
+### Honest residual
+- The transport is synchronous (a blocking prompt); a wall-clock timeout on a live TTY prompt, and an asynchronous pending-approvals queue, are future refinements. The non-interactive deny already covers the "no human available" case safely.
+
+`__version__` → 0.16.0. Roadmap: Phase 5 done; Phase 6 (hardening + operator guide) next.
+
+---
+
 ## [0.15.0] — 2026-06-24 — *Phase 4: real cryptographic signing*
 
 Origin/integrity can now be a real detached signature, not a keyed hash — and the keys live outside the model layer. Optional; the offline path stays zero-dependency. No safety-floor or wire-contract change; **86 → 95 tests** (the real-Ed25519 tests run in CI under the crypto extra).

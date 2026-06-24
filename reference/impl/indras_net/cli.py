@@ -77,8 +77,22 @@ def _cmd_run(args: argparse.Namespace) -> int:
         pre_ledger, pre_memory, memory_path = _load_or_new_state(args.state)
         state_label = "persistent (%s); ledger had %d leaves before this run" % (args.state, len(pre_ledger))
 
+    human_decider = None
+    human_label = "deny-by-default (no live human in the loop)"
+    if args.human_prompt:
+        from .floor import interactive_human_decider
+
+        human_decider = interactive_human_decider()
+        human_label = "interactive prompt (a Rule-of-Two action asks you; non-interactive -> deny)"
+
     swarm, ledger = _make_swarm(
-        scripted={}, with_steward=True, model=model, executor=executor, ledger=pre_ledger, memory=pre_memory
+        scripted={},
+        with_steward=True,
+        model=model,
+        executor=executor,
+        ledger=pre_ledger,
+        memory=pre_memory,
+        human_decider=human_decider,
     )
     context = {"untrusted_input": True} if args.untrusted else {"input_trust_label": "trusted:audited"}
     result = swarm.run(args.task, context)
@@ -89,6 +103,7 @@ def _cmd_run(args: argparse.Namespace) -> int:
     print("model: " + model_label)
     print("exec:  " + exec_label)
     print("state: " + state_label)
+    print("human: " + human_label)
     print("-" * 70)
     for i, occ in enumerate(result.occasion_results):
         decision = occ.decision.decision.name if occ.decision else "n/a"
@@ -176,6 +191,11 @@ def main(argv: typing.Optional[typing.List[str]] = None) -> int:
         "--state",
         metavar="DIR",
         help="persist the ledger + memory under DIR so successive runs continue (Phase 3)",
+    )
+    p_run.add_argument(
+        "--human-prompt",
+        action="store_true",
+        help="ask the operator (deny-by-default) when a Rule-of-Two action triggers the human gate (Phase 5)",
     )
     p_run.set_defaults(func=_cmd_run)
 

@@ -193,6 +193,7 @@ def make_swarm(
     with_steward: bool = False,
     executor=None,
     model=None,
+    human_decider=None,
 ):
     """Assemble a governance-issued swarm + ledger for end-to-end tests.
 
@@ -209,7 +210,7 @@ def make_swarm(
         )
         checker = Narasimha(checker_identity(), checker_model)
     steward = ImmuneSteward() if with_steward else None
-    human_gate = HumanGate(approvals or {}, default=HumanDecision.DENY)
+    human_gate = HumanGate(approvals or {}, default=HumanDecision.DENY, decider=human_decider)
     yama = Yama(EFFECT_REGISTRY, policy_version=POLICY_VERSION, human_gate=human_gate)
     ledger = AkashaSutra(
         writer_did=CHITRAGUPTA_DID,

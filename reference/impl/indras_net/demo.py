@@ -207,6 +207,7 @@ def _make_swarm(
     executor=None,
     ledger=None,
     memory=None,
+    human_decider=None,
 ):
     """Assemble a governance-issued swarm: Brahma + Vishwakarma + Yama + ledger.
 
@@ -227,7 +228,7 @@ def _make_swarm(
         checker = Narasimha(_build_checker_identity(), checker_model)
     memory = memory if memory is not None else (SwarmMemory() if with_memory else None)
     steward = ImmuneSteward() if with_steward else None
-    human_gate = HumanGate(approvals or {}, default=HumanDecision.DENY)
+    human_gate = HumanGate(approvals or {}, default=HumanDecision.DENY, decider=human_decider)
     yama = Yama(EFFECT_REGISTRY, policy_version=POLICY_VERSION, human_gate=human_gate)
     ledger = ledger if ledger is not None else AkashaSutra(
         writer_did=CHITRAGUPTA_DID,
