@@ -39,6 +39,11 @@ classifiers = [
 dependencies = []
 dynamic = ["version"]
 
+[project.optional-dependencies]
+# Phase 4: real Ed25519 signing. The offline/mock path stays zero-dependency; this extra is only
+# needed for real cryptographic signatures (indras_net.signing.Ed25519Signer).
+crypto = ["cryptography>=41"]
+
 [project.urls]
 Homepage = "https://epimystic.com"
 Repository = "https://github.com/epimystic-dev/indras-net"

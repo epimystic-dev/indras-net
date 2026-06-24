@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 # -- version + protocol constants -----------------------------------------
-__version__: str = "0.14.0"
+__version__: str = "0.15.0"
 SCHEMA_VERSION: str = "1.0.0"
 POLICY_VERSION: str = "1.0.0"
 
@@ -66,6 +66,16 @@ from .model_http import HttpChatModel
 
 # -- capability-scoped sandboxed effect execution (Phase 2) ---------------
 from .execution import Executor, SandboxViolation, SandboxedExecutor, StubExecutor
+
+# -- real cryptographic signing (Phase 4; optional 'cryptography' extra) ---
+from .signing import (
+    Ed25519Signer,
+    KeyedHashSigner,
+    SigningError,
+    crypto_available,
+    sign_checkpoint,
+    verify_checkpoint,
+)
 
 # -- honest collective vital signs ----------------------------------------
 from .collective import CollectiveVitalSigns, VitalSigns
@@ -158,6 +168,13 @@ __all__ = [
     "StubExecutor",
     "SandboxViolation",
     "Executor",
+    # signing (Phase 4; optional crypto extra)
+    "Ed25519Signer",
+    "KeyedHashSigner",
+    "SigningError",
+    "crypto_available",
+    "sign_checkpoint",
+    "verify_checkpoint",
     # collective
     "CollectiveVitalSigns",
     "VitalSigns",

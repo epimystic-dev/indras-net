@@ -28,6 +28,12 @@ jobs:
         working-directory: reference/impl
         run: python -m unittest discover -t . -s tests -p "test_*.py" -v
 
+      - name: Real-signing tests with the crypto extra (Ed25519)
+        working-directory: reference/impl
+        run: |
+          python -m pip install ".[crypto]"
+          python -m unittest tests.test_signing -v
+
       - name: Demo runs end-to-end
         working-directory: reference/impl
         run: python run_demo.py --scenario all

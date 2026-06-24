@@ -21,6 +21,23 @@ Nothing yet. Forthcoming work is tracked as **open problems** inside the relevan
 
 ---
 
+## [0.15.0] — 2026-06-24 — *Phase 4: real cryptographic signing*
+
+Origin/integrity can now be a real detached signature, not a keyed hash — and the keys live outside the model layer. Optional; the offline path stays zero-dependency. No safety-floor or wire-contract change; **86 → 95 tests** (the real-Ed25519 tests run in CI under the crypto extra).
+
+### Added
+- **`signing.py`** — one interface, two backends: `KeyedHashSigner` (the zero-dep stand-in — deterministic, **forgeable**, origin-shaped, *not* a real signature, clearly labelled) and **`Ed25519Signer`** (a real Ed25519 detached signature; `pip install indras-net[crypto]`). A forged signature, a tampered payload, and a wrong public key are all **rejected**; `crypto_available()` reports whether the backend is present, and the Ed25519 tests skip gracefully when it is not.
+- **Keys live outside the model.** Nothing in `model.py` / `model_http.py` imports `signing`, holds a private key, or signs — a tested structural invariant, so a compromised model cannot reach a key.
+- **`sign_checkpoint` / `verify_checkpoint`** — a signed checkpoint over a ledger's head (index + head_hash). With a real Ed25519 key this **closes the Phase-3 whole-chain-rewrite residual**: a rewritten ledger's new head will not match the signed checkpoint, and an attacker cannot re-sign without the private key.
+- **Packaging:** a `crypto` optional extra (`cryptography>=41`); CI installs it and runs the real Ed25519 suite on every push (validated locally too).
+
+### Changed
+- `canon.py`'s honesty note now points to `signing.py` for real signing; `detached_sig` is explicitly the forgeable zero-dep stand-in.
+
+`__version__` → 0.15.0. Roadmap: Phase 4 done; Phase 5 (human-gate transport) next.
+
+---
+
 ## [0.14.0] — 2026-06-24 — *Phase 3: durable, tamper-evident persistence*
 
 The ledger, and memory, now survive a restart — without weakening integrity. Opt-in; the in-memory path stays the default, so the proofs are untouched. No safety-floor or wire-contract change; **82 → 86 tests**.

@@ -5,10 +5,11 @@ Every other module addresses content by the hash of its canonical bytes, so a
 datum's identity IS its hash, not a hope. A truncated, corrupted, or stale read
 fails its content address before it can propagate (doc 21 / doc 04).
 
-Honesty note: there is no real cryptographic signing in this MVP. `detached_sig`
-is a keyed hash used for tamper-evidence only -- it proves nothing about the
-truth, safety, or floor-compatibility of the signed content. Verify the cage,
-not the animal.
+Honesty note: ``detached_sig`` here is a keyed-hash ORIGIN stand-in for the
+zero-dependency path -- it is forgeable and proves nothing about the truth,
+safety, or floor-compatibility of the signed content. Real Ed25519 signing is
+available in ``signing.py`` (the optional ``cryptography`` extra). Either way a
+valid signature proves origin/integrity only -- verify the cage, not the animal.
 """
 import hashlib
 import json
